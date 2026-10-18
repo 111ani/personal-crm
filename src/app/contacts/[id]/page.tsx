@@ -31,10 +31,10 @@ export const metadata: Metadata = {
 
 export default function ContactPage({ params }: PageProps<"/contacts/[id]">) {
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 md:gap-8">
       <Link
         href="/"
-        className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="inline-flex w-fit items-center gap-2 rounded-sm text-sm font-semibold text-brand transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <ArrowLeftIcon className="size-4" />
         Все контакты
@@ -64,25 +64,25 @@ async function ContactDetails({
 
   return (
     <>
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-4 md:gap-6">
         <ContactAvatar name={contact.name} size="lg" />
-        <div className="grid min-w-0 gap-2">
-          <div className="grid gap-0.5">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight break-words">
+        <div className="grid min-w-0 gap-3 md:gap-4">
+          <div className="grid gap-1.5 md:gap-2">
+            <h1 className="font-heading text-title font-medium break-words">
               {contact.name}
             </h1>
             {contact.about && (
-              <p className="text-muted-foreground">{contact.about}</p>
+              <p className="text-lead text-soft-foreground">{contact.about}</p>
             )}
           </div>
-          <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm md:text-base">
             {contact.phone && (
               <li>
                 <a
                   href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`}
-                  className="inline-flex items-center gap-1.5 hover:underline"
+                  className="inline-flex items-start gap-2 transition-colors hover:text-brand"
                 >
-                  <PhoneIcon className="size-4 text-muted-foreground" />
+                  <PhoneIcon className="mt-0.5 size-4 shrink-0 text-brand md:mt-1" />
                   {contact.phone}
                 </a>
               </li>
@@ -91,16 +91,16 @@ async function ContactDetails({
               <li>
                 <a
                   href={`mailto:${contact.email}`}
-                  className="inline-flex items-center gap-1.5 break-all hover:underline"
+                  className="inline-flex items-start gap-2 break-all transition-colors hover:text-brand"
                 >
-                  <MailIcon className="size-4 text-muted-foreground" />
+                  <MailIcon className="mt-0.5 size-4 shrink-0 text-brand md:mt-1" />
                   {contact.email}
                 </a>
               </li>
             )}
             {contact.howWeMet && (
-              <li className="inline-flex items-center gap-1.5 text-muted-foreground">
-                <HandshakeIcon className="size-4" />
+              <li className="inline-flex items-start gap-2 text-soft-foreground">
+                <HandshakeIcon className="mt-0.5 size-4 shrink-0 text-brand md:mt-1" />
                 {contact.howWeMet}
               </li>
             )}
@@ -108,7 +108,7 @@ async function ContactDetails({
         </div>
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="grid items-start gap-4 md:gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Card>
           <CardHeader>
             <CardTitle>Заметки</CardTitle>
@@ -153,7 +153,7 @@ async function ContactDetails({
 function NotesList({ notes }: { notes: Note[] }) {
   if (notes.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">
         Заметок пока нет. Запишите, о чём поговорили, — в следующий раз будет
         проще вспомнить контекст.
       </p>
@@ -161,16 +161,16 @@ function NotesList({ notes }: { notes: Note[] }) {
   }
 
   return (
-    <ol className="grid gap-3">
+    <ol className="grid">
       {notes.map((note) => (
-        <li key={note.id} className="rounded-lg bg-muted/50 px-4 py-3">
+        <li key={note.id} className="border-t py-4 last:pb-0">
           <time
             dateTime={note.createdAt.toISOString()}
-            className="text-xs text-muted-foreground"
+            className="text-xs font-semibold text-brand"
           >
             {formatDateTime(note.createdAt)}
           </time>
-          <p className="mt-1 text-sm leading-relaxed break-words whitespace-pre-wrap">
+          <p className="mt-1.5 text-base leading-relaxed break-words whitespace-pre-wrap text-soft-foreground">
             {note.body}
           </p>
         </li>
@@ -182,16 +182,16 @@ function NotesList({ notes }: { notes: Note[] }) {
 function ContactDetailsSkeleton() {
   return (
     <div className="grid gap-6" aria-busy="true" aria-label="Загружаем контакт">
-      <div className="flex items-center gap-4">
-        <Skeleton className="size-14 rounded-full" />
+      <div className="flex items-center gap-4 md:gap-6">
+        <Skeleton className="size-16 rounded-full md:size-20" />
         <div className="grid gap-2">
-          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-9 w-56 md:h-12 md:w-80" />
           <Skeleton className="h-4 w-40" />
         </div>
       </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <Skeleton className="h-72 rounded-xl" />
-        <Skeleton className="h-72 rounded-xl" />
+        <Skeleton className="h-72 rounded-card" />
+        <Skeleton className="h-72 rounded-card" />
       </div>
     </div>
   );

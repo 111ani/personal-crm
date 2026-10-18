@@ -17,14 +17,14 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center gap-3 py-16 text-center">
+    <div className="flex flex-col items-center gap-4 py-16 text-center">
       <span className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
         <TriangleAlertIcon className="size-6" />
       </span>
-      <h1 className="font-heading text-xl font-semibold">
+      <h1 className="font-heading text-card-title font-medium">
         Не удалось загрузить данные
       </h1>
-      <p className="max-w-md text-sm text-muted-foreground">
+      <p className="max-w-md text-soft-foreground">
         Скорее всего, не запущена база данных. Проверьте, что Docker Desktop
         работает и выполнена команда <code>docker compose up -d</code>, затем
         попробуйте ещё раз.

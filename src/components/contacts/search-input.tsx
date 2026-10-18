@@ -63,7 +63,7 @@ export function SearchInput() {
       <label htmlFor="contact-search" className="sr-only">
         Поиск по имени
       </label>
-      <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+      <SearchIcon className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-brand" />
       <Input
         id="contact-search"
         type="search"
@@ -78,12 +78,12 @@ export function SearchInput() {
         }}
         placeholder="Поиск по имени"
         autoComplete="off"
-        className="h-10 bg-background pr-10 pl-9 [&::-webkit-search-cancel-button]:hidden"
+        className="h-12 bg-card pr-12 pl-12 [&::-webkit-search-cancel-button]:hidden"
       />
-      <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
+      <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center">
         {isPending ? (
           <Loader2Icon
-            className="mr-1.5 size-4 animate-spin text-muted-foreground"
+            className="mr-2 size-4 animate-spin text-brand"
             aria-label="Ищем…"
           />
         ) : (
@@ -110,12 +110,12 @@ export function SearchInput() {
 export function SearchInputFallback() {
   return (
     <div className="relative w-full">
-      <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+      <SearchIcon className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-brand" />
       <Input
         disabled
         placeholder="Поиск по имени"
         aria-label="Поиск по имени"
-        className="h-10 bg-background pl-9"
+        className="h-12 bg-card pl-12"
       />
     </div>
   );

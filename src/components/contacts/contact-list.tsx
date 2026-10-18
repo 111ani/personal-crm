@@ -15,8 +15,9 @@ const CONTACT_FORMS: [string, string, string] = [
   "контактов",
 ];
 
+// Phone and email columns only from `lg`: on tablets they would squeeze the name
 const rowGrid =
-  "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 md:grid-cols-[auto_minmax(0,1fr)_11rem_15rem]";
+  "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 lg:grid-cols-[auto_minmax(0,1fr)_11rem_15rem] lg:gap-x-6";
 
 export async function ContactList({
   searchParams,
@@ -43,8 +44,11 @@ export async function ContactList({
   }
 
   return (
-    <section aria-label="Контакты" className="grid gap-3">
-      <p className="text-sm text-muted-foreground" aria-live="polite">
+    <section aria-label="Контакты" className="grid gap-4">
+      <p
+        className="text-eyebrow font-semibold text-brand uppercase"
+        aria-live="polite"
+      >
         {query
           ? `Найдено: ${formatCount(items.length, CONTACT_FORMS)} из ${total.toLocaleString("ru-RU")}`
           : `Всего ${formatCount(total, CONTACT_FORMS)}`}
@@ -57,11 +61,11 @@ export async function ContactList({
           text="Проверьте, как написано имя, или добавьте новый контакт."
         />
       ) : (
-        <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+        <div className="overflow-hidden rounded-card bg-card ring-1 ring-border">
           <div
             className={cn(
               rowGrid,
-              "hidden border-b bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground md:grid",
+              "hidden border-b px-6 py-4 text-eyebrow font-semibold text-brand uppercase lg:grid",
             )}
           >
             <span className="col-span-2">Имя</span>
@@ -74,20 +78,20 @@ export async function ContactList({
               return (
                 <li
                   key={contact.id}
-                  className={cn(isNew && "bg-amber-50")}
+                  className={cn(isNew && "bg-highlight")}
                 >
                   {isNew && <ScrollIntoView />}
                   <Link
                     href={`/contacts/${contact.id}`}
                     className={cn(
                       rowGrid,
-                      "px-4 py-3 transition-colors outline-none hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
+                      "px-4 py-3.5 transition-colors duration-150 outline-none hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset md:px-6",
                     )}
                   >
                     <ContactAvatar name={contact.name} />
                     <span className="min-w-0">
                       <span className="flex items-center gap-2">
-                        <span className="truncate font-medium">
+                        <span className="truncate font-heading text-name font-medium">
                           {contact.name}
                         </span>
                         {isNew && <Badge variant="secondary">Новый</Badge>}
@@ -99,19 +103,19 @@ export async function ContactList({
                       )}
                       {/* On narrow screens contacts go under the name */}
                       {(contact.phone || contact.email) && (
-                        <span className="block truncate text-sm text-muted-foreground md:hidden">
+                        <span className="block truncate text-sm text-muted-foreground lg:hidden">
                           {[contact.phone, contact.email]
                             .filter(Boolean)
                             .join(" · ")}
                         </span>
                       )}
                     </span>
-                    <span className="hidden truncate text-sm tabular-nums md:block">
+                    <span className="hidden truncate text-sm text-soft-foreground tabular-nums lg:block">
                       {contact.phone ?? (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </span>
-                    <span className="hidden truncate text-sm md:block">
+                    <span className="hidden truncate text-sm text-soft-foreground lg:block">
                       {contact.email ?? (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -137,11 +141,11 @@ function EmptyState({
   text: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl bg-card px-6 py-12 text-center ring-1 ring-foreground/10">
-      <span className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground [&_svg]:size-5">
+    <div className="flex flex-col items-center gap-2 rounded-card bg-card px-6 py-14 text-center ring-1 ring-border">
+      <span className="mb-2 flex size-12 items-center justify-center rounded-full bg-secondary text-brand [&_svg]:size-6">
         {icon}
       </span>
-      <p className="font-medium">{title}</p>
+      <p className="font-heading text-card-title font-medium">{title}</p>
       <p className="text-sm text-muted-foreground">{text}</p>
     </div>
   );
@@ -149,13 +153,13 @@ function EmptyState({
 
 export function ContactListSkeleton() {
   return (
-    <div className="grid gap-3" aria-busy="true" aria-label="Загружаем контакты">
+    <div className="grid gap-4" aria-busy="true" aria-label="Загружаем контакты">
       <Skeleton className="h-4 w-40" />
-      <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+      <div className="overflow-hidden rounded-card bg-card ring-1 ring-border">
         <ul className="divide-y">
           {Array.from({ length: 8 }, (_, index) => (
-            <li key={index} className="flex items-center gap-3 px-4 py-3">
-              <Skeleton className="size-9 rounded-full" />
+            <li key={index} className="flex items-center gap-4 px-4 py-3.5 md:px-6">
+              <Skeleton className="size-10 rounded-full" />
               <div className="grid flex-1 gap-1.5">
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-3 w-32" />

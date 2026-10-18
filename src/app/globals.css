@@ -4,41 +4,104 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Design tokens: the only place for colors, fonts, radii and type sizes.
+ * The look follows the landing (personal-crm-landing, src/styles/tokens.css):
+ * warm cream background, terracotta accent, Playfair Display headings, Manrope text,
+ * pill buttons, thin lines instead of shadows.
+ */
+
+@theme {
+  /* The default Tailwind palette is switched off: use only the colors below. */
+  --color-*: initial;
+
+  /* Radii */
+  --radius-card: 16px;
+
+  /*
+   * Type scale by role. Mobile values here, desktop values in the media query below,
+   * so components use one class (e.g. `text-title`) for both layouts.
+   */
+  --text-eyebrow: 11px;
+  --text-eyebrow--line-height: normal;
+  --text-eyebrow--letter-spacing: 0.32em;
+
+  --text-title: 34px;
+  --text-title--line-height: 1.08;
+  --text-title--letter-spacing: -0.025em;
+
+  --text-lead: 15px;
+  --text-lead--line-height: 1.5;
+
+  --text-card-title: 21px;
+  --text-card-title--line-height: 1.15;
+  --text-card-title--letter-spacing: -0.02em;
+
+  --text-name: 18px;
+  --text-name--line-height: 1.25;
+  --text-name--letter-spacing: -0.01em;
+
+  --text-button: 16px;
+  --text-button--line-height: normal;
+}
+
+/* Desktop: Tailwind's `md` breakpoint (768px), the same as on the landing. */
+@media (width >= 48rem) {
+  :root {
+    --radius-card: 20px;
+
+    --text-eyebrow: 12px;
+
+    --text-title: 48px;
+    --text-title--line-height: 1.04;
+    --text-title--letter-spacing: -0.03em;
+
+    --text-lead: 18px;
+    --text-lead--line-height: 1.55;
+
+    --text-card-title: 24px;
+
+    --text-name: 19px;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", Consolas, monospace;
-  --font-heading: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
+  --color-soft-foreground: var(--soft-foreground);
+  --color-brand: var(--brand);
+  --color-highlight: var(--highlight);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-avatar-1: var(--avatar-1);
+  --color-avatar-1-foreground: var(--avatar-1-foreground);
+  --color-avatar-2: var(--avatar-2);
+  --color-avatar-2-foreground: var(--avatar-2-foreground);
+  --color-avatar-3: var(--avatar-3);
+  --color-avatar-3-foreground: var(--avatar-3-foreground);
+  --color-avatar-4: var(--avatar-4);
+  --color-avatar-4-foreground: var(--avatar-4-foreground);
+  --color-avatar-5: var(--avatar-5);
+  --color-avatar-5-foreground: var(--avatar-5-foreground);
+  --color-avatar-6: var(--avatar-6);
+  --color-avatar-6-foreground: var(--avatar-6-foreground);
+  /* --font-manrope and --font-playfair are set by next/font in src/app/layout.tsx */
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, monospace;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,73 +111,43 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Landing token names are given in comments where the value is the same. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  --background: #f6f2ec; /* bg */
+  --foreground: #1f1915; /* ink */
+  --soft-foreground: #3d342e; /* muted: descriptions */
+  --muted-foreground: #75665b; /* hints, dates, secondary details */
+  --brand: #9a5a3c; /* accent: eyebrows, icons, links */
+  --card: #fdfaf6;
+  --card-foreground: #1f1915;
+  --popover: #fdfaf6;
+  --popover-foreground: #1f1915;
+  --primary: #b47d60; /* accent-soft: main buttons */
+  --primary-hover: #a56e52; /* accent-soft-hover */
+  --primary-foreground: #fff;
+  --secondary: #ede5da; /* bg-alt */
+  --secondary-foreground: #5e3420; /* cta-btn-text */
+  --muted: #ede5da; /* bg-alt */
+  --highlight: #fbeee4; /* cta-text-3: a just-added contact */
+  --destructive: #b3412f;
+  --border: #e7dccf; /* line */
+  --input: #d9cabb;
+  --ring: #9a5a3c; /* accent: focus outline */
+  --radius: 1rem;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Avatar backgrounds and initials: muted warm tones */
+  --avatar-1: #f1e0d4;
+  --avatar-1-foreground: #8a4b2f;
+  --avatar-2: #ece2cc;
+  --avatar-2-foreground: #6d5626;
+  --avatar-3: #e0e4d2;
+  --avatar-3-foreground: #4f5b36;
+  --avatar-4: #f0dcd8;
+  --avatar-4-foreground: #8a3f3a;
+  --avatar-5: #e4ded6;
+  --avatar-5-foreground: #574b40;
+  --avatar-6: #e9dde3;
+  --avatar-6-foreground: #6e4558;
 }
 
 @layer base {
@@ -123,6 +156,17 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  h1,
+  h2 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  /* Thin line icons, as on the landing */
+  svg.lucide {
+    stroke-width: 1.5;
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;

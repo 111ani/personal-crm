@@ -33,7 +33,7 @@ export function AddContactDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="lg" className="h-10 px-4" />}>
+      <DialogTrigger render={<Button size="lg" />}>
         <PlusIcon />
         Добавить контакт
       </DialogTrigger>

@@ -35,7 +35,7 @@ export function AddNoteForm({ contactId }: { contactId: string }) {
           // Keep the text if saving failed; after success the form resets
           defaultValue={state.status === "error" ? state.body : ""}
           placeholder="О чём поговорили, о чём договорились, что важно не забыть…"
-          className="min-h-24 bg-background"
+          className="min-h-28"
           aria-invalid={error ? true : undefined}
           disabled={isPending}
           onKeyDown={(event) => {

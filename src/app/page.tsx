@@ -12,12 +12,10 @@ import {
 
 export default function ContactsPage({ searchParams }: PageProps<"/">) {
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-1">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Контакты
-        </h1>
-        <p className="text-sm text-muted-foreground">
+    <div className="grid gap-8 md:gap-10">
+      <div className="grid gap-3 md:gap-4">
+        <h1 className="font-heading text-title font-medium">Контакты</h1>
+        <p className="max-w-140 text-lead text-soft-foreground">
           Люди, которых вы знаете лично, и о чём вы с ними договорились.
         </p>
       </div>
