@@ -3,7 +3,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import type { NewContact, NewNote } from "../src/db/schema";
+import type { NewContact, NewNote } from "../src/db/schema.ts";
 
 type Gender = "m" | "f";
 

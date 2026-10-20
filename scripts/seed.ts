@@ -8,8 +8,8 @@ import { count } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-import { contacts, notes } from "../src/db/schema";
-import { generateSeedData } from "./seed-data";
+import { contacts, notes } from "../src/db/schema.ts";
+import { generateSeedData } from "./seed-data.ts";
 
 const CONTACT_COUNT = 1000;
 const BATCH_SIZE = 500;

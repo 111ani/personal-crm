@@ -1,0 +1,68 @@
+# Production stack on the server, docker compose project "prod".
+# Run it through deploy/common.sh (deploy.sh, rollback.sh): it passes
+# /srv/personal-crm/.env (database settings) and release.env (image tags).
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+x-app-env: &app-env
+  # Only letters and digits in the password: it goes into a URL as is
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is not set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is not set in .env}
+    # No published ports: only containers of this project reach the database
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  app:
+    image: ghcr.io/111ani/personal-crm:${APP_TAG:?APP_TAG is not set}
+    restart: unless-stopped
+    environment: *app-env
+    ports:
+      # nginx proxies app.lena-14.ru here; not reachable from the network
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 2s
+    logging: *logging
+
+  # One-off container: docker compose run --rm migrate
+  migrate:
+    image: ghcr.io/111ani/personal-crm:${APP_TAG:?APP_TAG is not set}
+    profiles: [tools]
+    command: ["node", "scripts/migrate.ts"]
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  db-data:
