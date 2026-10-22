@@ -11,6 +11,7 @@ import {
 
 import { AddNoteForm } from "@/components/contacts/add-note-form";
 import { ContactAvatar } from "@/components/contacts/contact-avatar";
+import { DeleteContactDialog } from "@/components/contacts/delete-contact-dialog";
 import { EditContactForm } from "@/components/contacts/edit-contact-form";
 import {
   Card,
@@ -132,7 +133,7 @@ async function ContactDetails({
               Добавлен {formatDateTime(contact.createdAt)}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid gap-5">
             <EditContactForm
               contactId={contact.id}
               initialValues={{
@@ -143,6 +144,10 @@ async function ContactDetails({
                 email: contact.email ?? "",
               }}
             />
+            {/* Outside the edit form, so it can never submit it */}
+            <div className="border-t pt-5">
+              <DeleteContactDialog contactId={contact.id} name={contact.name} />
+            </div>
           </CardContent>
         </Card>
       </div>
