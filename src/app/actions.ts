@@ -2,6 +2,7 @@
 
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect, RedirectType } from "next/navigation";
 import { z } from "zod";
 
 import { db } from "@/db";
@@ -29,6 +30,10 @@ export type NoteFormState =
   | { status: "idle" }
   | { status: "error"; message: string; body: string }
   | { status: "success" };
+
+export type DeleteContactState =
+  | { status: "idle" }
+  | { status: "error"; message: string };
 
 const SAVE_FAILED = "Не удалось сохранить. Попробуйте ещё раз";
 
@@ -126,6 +131,30 @@ export async function updateContact(
     console.error("Failed to update contact", error);
     return { status: "error", message: SAVE_FAILED, fieldErrors: {}, values };
   }
+}
+
+export async function deleteContact(
+  contactId: string,
+): Promise<DeleteContactState> {
+  const id = contactIdSchema.safeParse(contactId);
+  if (!id.success) {
+    return { status: "error", message: "Контакт не найден" };
+  }
+
+  try {
+    // Notes go too: notes.contact_id is ON DELETE CASCADE. A contact that
+    // is already gone is not an error - the user gets what they wanted
+    await db.delete(contacts).where(eq(contacts.id, id.data));
+  } catch (error) {
+    console.error("Failed to delete contact", error);
+    return { status: "error", message: "Не удалось удалить. Попробуйте ещё раз" };
+  }
+
+  refreshAllPages();
+  // Redirect from the server: otherwise the refreshed card would flash
+  // "not found" before the client navigates. Replace, so Back does not
+  // return to the deleted card. Must stay outside try/catch: it throws
+  redirect("/", RedirectType.replace);
 }
 
 export async function addNote(
