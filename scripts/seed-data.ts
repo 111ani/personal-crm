@@ -1,9 +1,18 @@
-// Test data generator: realistic Russian contacts with notes.
+// Test data generator: realistic Russian contacts with notes, some of them
+// with a keep-in-touch frequency and "Связались" check-ins.
 // Deterministic: the same seed always produces the same people.
 
 import { randomUUID } from "node:crypto";
 
-import type { NewContact, NewNote } from "../src/db/schema.ts";
+import type {
+  NewContact,
+  NewContactCheckIn,
+  NewNote,
+} from "../src/db/schema.ts";
+import {
+  contactFrequencies,
+  type ContactFrequency,
+} from "../src/lib/contacts/frequency.ts";
 
 type Gender = "m" | "f";
 
@@ -271,10 +280,16 @@ function pickNoteCount(random: Random) {
 
 export function generateSeedData(count: number, now: Date, seed = 20261008) {
   const random = createRandom(seed);
+  // Its own generator, so the people and notes stay the same as before
+  // keep-in-touch data was added
+  const keepInTouchRandom = createRandom(seed + 1);
   const contactRows: NewContact[] = [];
   const noteRows: NewNote[] = [];
+  const checkInRows: NewContactCheckIn[] = [];
   const usedNames = new Set<string>();
   const fourYearsAgo = new Date(now.getTime() - 4 * 365 * 24 * 60 * 60 * 1000);
+  // Check-ins are in the past: none of them is today
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   while (contactRows.length < count) {
     const gender: Gender = random.chance(0.5) ? "m" : "f";
@@ -307,6 +322,29 @@ export function generateSeedData(count: number, now: Date, seed = 20261008) {
       });
     }
 
+    // About 15% keep in touch: the frequency was set some time after the
+    // contact was added, and some were ticked "Связались" once or twice since
+    let contactFrequency: ContactFrequency | null = null;
+    let contactFrequencySetAt: Date | null = null;
+    if (keepInTouchRandom.chance(0.15)) {
+      contactFrequency = keepInTouchRandom.pick(contactFrequencies);
+      contactFrequencySetAt = randomDateBetween(keepInTouchRandom, createdAt, now);
+      if (contactFrequencySetAt < yesterday && keepInTouchRandom.chance(0.4)) {
+        const checkInCount = keepInTouchRandom.int(1, 2);
+        for (let index = 0; index < checkInCount; index++) {
+          checkInRows.push({
+            contactId: id,
+            createdAt: randomDateBetween(
+              keepInTouchRandom,
+              contactFrequencySetAt,
+              yesterday,
+            ),
+          });
+        }
+      }
+    }
+
+    const lastNoteAt = noteDates.at(-1) ?? createdAt;
     contactRows.push({
       id,
       name,
@@ -316,10 +354,16 @@ export function generateSeedData(count: number, now: Date, seed = 20261008) {
         : null,
       phone: random.chance(0.85) ? makePhone(random) : null,
       email: random.chance(0.65) ? makeEmail(random, firstName, lastName) : null,
+      contactFrequency,
+      contactFrequencySetAt,
       createdAt,
-      updatedAt: noteDates.at(-1) ?? createdAt,
+      // Setting the frequency is an edit of the contact
+      updatedAt:
+        contactFrequencySetAt && contactFrequencySetAt > lastNoteAt
+          ? contactFrequencySetAt
+          : lastNoteAt,
     });
   }
 
-  return { contactRows, noteRows };
+  return { contactRows, noteRows, checkInRows };
 }

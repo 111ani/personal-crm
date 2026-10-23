@@ -5,6 +5,7 @@ import {
   ContactList,
   ContactListSkeleton,
 } from "@/components/contacts/contact-list";
+import { DueContacts } from "@/components/contacts/due-contacts";
 import {
   SearchInput,
   SearchInputFallback,
@@ -26,6 +27,11 @@ export default function ContactsPage({ searchParams }: PageProps<"/">) {
         </Suspense>
         <AddContactDialog />
       </div>
+
+      {/* No placeholder: the block may well not be there at all */}
+      <Suspense>
+        <DueContacts searchParams={searchParams} />
+      </Suspense>
 
       <Suspense fallback={<ContactListSkeleton />}>
         <ContactList searchParams={searchParams} />
