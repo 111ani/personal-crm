@@ -12,6 +12,7 @@ import {
 import { AddNoteForm } from "@/components/contacts/add-note-form";
 import { ContactAvatar } from "@/components/contacts/contact-avatar";
 import { DeleteContactDialog } from "@/components/contacts/delete-contact-dialog";
+import type { DueLine } from "@/components/contacts/contact-frequency-field";
 import { EditContactForm } from "@/components/contacts/edit-contact-form";
 import {
   Card,
@@ -22,9 +23,17 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Note } from "@/db/schema";
-import { getContactWithNotes } from "@/lib/contacts/queries";
+import {
+  getContactWithNotes,
+  type ContactDue,
+} from "@/lib/contacts/queries";
 import { contactIdSchema } from "@/lib/contacts/validation";
-import { formatCount, formatDateTime } from "@/lib/format";
+import {
+  formatCount,
+  formatDateTime,
+  formatDayMonth,
+  formatOverdue,
+} from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Контакт — Личная CRM",
@@ -61,7 +70,7 @@ async function ContactDetails({
   if (!data) {
     notFound();
   }
-  const { contact, notes } = data;
+  const { contact, notes, due } = data;
 
   return (
     <>
@@ -143,6 +152,17 @@ async function ContactDetails({
                 phone: contact.phone ?? "",
                 email: contact.email ?? "",
               }}
+              initialFrequency={contact.contactFrequency ?? ""}
+              due={due && describeDue(due)}
+              checkIn={
+                due && {
+                  checkedInToday: due.checkedInToday,
+                  lastCheckIn:
+                    !due.checkedInToday && due.lastCheckInAt
+                      ? formatDayMonth(due.lastCheckInAt, due.now)
+                      : null,
+                }
+              }
             />
             {/* Outside the edit form, so it can never submit it */}
             <div className="border-t pt-5">
@@ -153,6 +173,20 @@ async function ContactDetails({
       </div>
     </>
   );
+}
+
+// Formatted here, on the server, like the note dates: the browser's time
+// zone may differ
+function describeDue(due: ContactDue): DueLine {
+  return due.isDue
+    ? {
+        label: `Пора связаться — ${formatOverdue(due.overdueDays)}`,
+        isDue: true,
+      }
+    : {
+        label: `Связаться до ${formatDayMonth(due.dueAt, due.now)}`,
+        isDue: false,
+      };
 }
 
 function NotesList({ notes }: { notes: Note[] }) {

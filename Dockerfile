@@ -36,6 +36,8 @@ COPY --from=build --chown=node:node /app/.next ./.next
 COPY drizzle ./drizzle
 COPY scripts ./scripts
 COPY src/db/schema.ts ./src/db/schema.ts
+# schema.ts takes the list of contact frequencies from here
+COPY src/lib/contacts/frequency.ts ./src/lib/contacts/frequency.ts
 USER node
 EXPOSE 3000
 CMD ["node", "node_modules/next/dist/bin/next", "start", "--hostname", "0.0.0.0", "--port", "3000"]

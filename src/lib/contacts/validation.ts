@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { contactFrequencies } from "@/lib/contacts/frequency";
+
 // Empty optional fields are stored as NULL, not as empty strings
 const optionalText = (max: number, tooLongMessage: string) =>
   z
@@ -36,6 +38,13 @@ export const noteSchema = z.object({
 
 export const contactIdSchema = z.uuid();
 
+export const checkInIdSchema = z.uuid();
+
+// "Не задано" comes from the form as an empty string and is stored as NULL
+export const contactFrequencySchema = z
+  .enum([...contactFrequencies, ""], "Выберите, как часто общаться, из списка")
+  .transform((value) => (value === "" ? null : value));
+
 export type ContactInput = z.infer<typeof contactSchema>;
 export type ContactField = keyof ContactInput;
 export type ContactFormValues = Record<ContactField, string>;
@@ -47,6 +56,11 @@ export const contactFields: ContactField[] = [
   "phone",
   "email",
 ];
+
+export function readContactFrequency(formData: FormData) {
+  const value = formData.get("contactFrequency");
+  return typeof value === "string" ? value : "";
+}
 
 export function readContactForm(formData: FormData): ContactFormValues {
   const read = (key: ContactField) => {

@@ -42,6 +42,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
         classNames: {
           toast: "cn-toast",
         },
+        // Action button (e.g. "Отменить") as a secondary pill button. Inline,
+        // because Sonner's own stylesheet beats Tailwind classes
+        actionButtonStyle: {
+          height: "calc(var(--spacing) * 8)",
+          paddingInline: "calc(var(--spacing) * 4)",
+          borderRadius: "9999px",
+          background: "var(--secondary)",
+          color: "var(--secondary-foreground)",
+          fontWeight: 600,
+        },
       }}
       {...props}
     />

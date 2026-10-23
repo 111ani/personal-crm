@@ -17,6 +17,7 @@
 
   /* Radii */
   --radius-card: 16px;
+  --radius-checkbox: 5px;
 
   /*
    * Type scale by role. Mobile values here, desktop values in the media query below,
