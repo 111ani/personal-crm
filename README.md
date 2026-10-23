@@ -131,3 +131,4 @@ POSTGRES_DB=
 - Проверки: `pnpm typecheck`, `pnpm lint`, `pnpm build`
 - `/health` — проверка для выкатки: 200, если приложение работает и база отвечает, иначе 503
 - Образ — `Dockerfile`; в нём же миграции (`node scripts/migrate.ts`) и тестовые данные (`node scripts/seed.ts`). Выкатка — `.github/workflows/deploy.yml` и `deploy/`
+- Требования к фичам ведём в [OpenSpec](https://openspec.dev): действующие требования — `openspec/specs/`, фичи в работе — `openspec/changes/`, настройки (язык спек — русский, контекст проекта) — `openspec/config.yaml`. Команды в Claude Code: `/opsx:propose` — описать фичу, `/opsx:apply` — сделать, `/opsx:archive` — закрыть. На новом компьютере один раз: `npm install -g @fission-ai/openspec@latest`, обновить файлы в проекте — `openspec update`
