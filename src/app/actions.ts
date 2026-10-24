@@ -18,6 +18,7 @@ import {
   readContactFrequency,
   type ContactField,
   type ContactFormValues,
+  type ContactFrequencyValues,
 } from "@/lib/contacts/validation";
 
 export type ContactFormState =
@@ -28,7 +29,9 @@ export type ContactFormState =
       fieldErrors: Partial<Record<ContactField, string>>;
       values: ContactFormValues;
       // Only the card's form has the frequency field
-      frequency?: string;
+      frequency?: ContactFrequencyValues;
+      // For the number of days under it
+      frequencyError?: string;
     }
   | { status: "success"; contactId: string; name: string };
 
@@ -104,17 +107,19 @@ export async function updateContact(
   formData: FormData,
 ): Promise<ContactFormState> {
   const values = readContactForm(formData);
-  const frequencyValue = readContactFrequency(formData);
+  const frequencyValues = readContactFrequency(formData);
   // Keep what the user typed and chose, so a failed save loses nothing
   const failure = (
     message: string,
     fieldErrors: Partial<Record<ContactField, string>> = {},
+    frequencyError?: string,
   ): ContactFormState => ({
     status: "error",
     message,
     fieldErrors,
     values,
-    frequency: frequencyValue,
+    frequency: frequencyValues,
+    frequencyError,
   });
 
   const id = contactIdSchema.safeParse(contactId);
@@ -123,31 +128,36 @@ export async function updateContact(
   }
 
   const parsed = contactSchema.safeParse(values);
-  if (!parsed.success) {
+  const frequency = contactFrequencySchema.safeParse(frequencyValues);
+  const frequencyIssue = frequency.error?.issues[0];
+  if (frequencyIssue && frequencyIssue.path[0] !== "days") {
+    // Only a tampered form can send a value that is not in the list
+    return failure(frequencyIssue.message);
+  }
+  if (!parsed.success || !frequency.success) {
     return failure(
       "Проверьте поля формы",
-      firstErrors<ContactField>(parsed.error),
+      parsed.success ? {} : firstErrors<ContactField>(parsed.error),
+      frequencyIssue?.message,
     );
   }
-
-  const frequency = contactFrequencySchema.safeParse(frequencyValue);
-  if (!frequency.success) {
-    // Only a tampered form can send a value that is not in the list
-    return failure(frequency.error.issues[0]?.message ?? SAVE_FAILED);
-  }
+  const { frequency: contactFrequency, days: contactFrequencyDays } =
+    frequency.data;
 
   try {
     const [updated] = await db
       .update(contacts)
       .set({
         ...parsed.data,
-        contactFrequency: frequency.data,
-        // A new frequency starts counting now; the same one keeps its moment,
-        // so editing only the phone does not move the due date
+        contactFrequency,
+        contactFrequencyDays,
+        // A new frequency (or a new number of days) starts counting now; the
+        // same one keeps its moment, so editing only the phone does not move
+        // the due date
         contactFrequencySetAt:
-          frequency.data === null
+          contactFrequency === null
             ? null
-            : sql`case when ${contacts.contactFrequency} = ${frequency.data} then ${contacts.contactFrequencySetAt} else now() end`,
+            : sql`case when ${contacts.contactFrequency} = ${contactFrequency} and ${contacts.contactFrequencyDays} is not distinct from ${contactFrequencyDays} then ${contacts.contactFrequencySetAt} else now() end`,
         updatedAt: sql`now()`,
       })
       .where(eq(contacts.id, id.data))

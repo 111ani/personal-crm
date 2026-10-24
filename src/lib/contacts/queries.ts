@@ -9,6 +9,7 @@ import {
   ilike,
   isNotNull,
   sql,
+  type SQL,
 } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -24,6 +25,8 @@ export type DueContact = {
   id: string;
   name: string;
   frequency: ContactFrequency;
+  // N for the "days" frequency, NULL for the others
+  frequencyDays: number | null;
   overdueDays: number;
 };
 
@@ -42,16 +45,17 @@ export type ContactDue = {
 export const startOfToday = sql`date_trunc('day', now())`;
 
 // Months and years are calendar ones: Postgres adds them by the calendar
-const frequencyIntervals: Record<ContactFrequency, string> = {
-  week: "7 days",
-  month: "1 month",
-  quarter: "3 months",
-  year: "1 year",
+const frequencyIntervals: Record<ContactFrequency, SQL> = {
+  week: sql`'7 days'::interval`,
+  month: sql`'1 month'::interval`,
+  quarter: sql`'3 months'::interval`,
+  year: sql`'1 year'::interval`,
+  days: sql`make_interval(days => ${contacts.contactFrequencyDays})`,
 };
 
 const frequencyInterval = sql`case ${contacts.contactFrequency} ${sql.join(
   Object.entries(frequencyIntervals).map(
-    ([frequency, interval]) => sql`when ${frequency} then ${interval}::interval`,
+    ([frequency, interval]) => sql`when ${frequency} then ${interval}`,
   ),
   sql` `,
 )} end`;
@@ -61,10 +65,10 @@ const lastNoteAt = sql`(select max(${notes.createdAt}) from ${notes} where ${not
 const lastCheckInAt = sql`(select max(${contactCheckIns.createdAt}) from ${contactCheckIns} where ${contactCheckIns.contactId} = ${contacts.id})`;
 
 /**
- * Contacts with a frequency and the moment they are due: the interval after
- * the latest note or check-in, or after the frequency was set if there were
- * neither. The one rule for the home block and the card, so both always show
- * the same overdue.
+ * Contacts with a frequency and the moment they are due: the start of the day
+ * the interval runs out after the latest note or check-in, or after the
+ * frequency was set if there were neither. The one rule for the home block
+ * and the card, so both always show the same overdue.
  */
 const contactsWithDue = db
   .select({
@@ -74,10 +78,14 @@ const contactsWithDue = db
     frequency: sql<ContactFrequency>`${contacts.contactFrequency}`.as(
       "frequency",
     ),
+    frequencyDays: sql<number | null>`${contacts.contactFrequencyDays}`.as(
+      "frequency_days",
+    ),
     lastCheckInAt: sql<Date | null>`${lastCheckInAt}`
       .mapWith(contactCheckIns.createdAt)
       .as("last_check_in_at"),
-    dueAt: sql<Date>`coalesce(greatest(${lastNoteAt}, ${lastCheckInAt}), ${contacts.contactFrequencySetAt}) + ${frequencyInterval}`
+    // A whole day: by the database clock (UTC), like startOfToday
+    dueAt: sql<Date>`date_trunc('day', coalesce(greatest(${lastNoteAt}, ${lastCheckInAt}), ${contacts.contactFrequencySetAt}) + ${frequencyInterval})`
       .mapWith(contacts.contactFrequencySetAt)
       .as("due_at"),
   })
@@ -130,6 +138,7 @@ export async function listDueContacts(): Promise<DueContact[]> {
       id: contactsWithDue.id,
       name: contactsWithDue.name,
       frequency: contactsWithDue.frequency,
+      frequencyDays: contactsWithDue.frequencyDays,
       overdueDays,
     })
     .from(contactsWithDue)

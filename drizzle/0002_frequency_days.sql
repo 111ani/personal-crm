@@ -1,0 +1,4 @@
+ALTER TABLE "contacts" DROP CONSTRAINT "contacts_contact_frequency_check";--> statement-breakpoint
+ALTER TABLE "contacts" ADD COLUMN "contact_frequency_days" integer;--> statement-breakpoint
+ALTER TABLE "contacts" ADD CONSTRAINT "contacts_contact_frequency_days_check" CHECK (("contacts"."contact_frequency" is not distinct from 'days') = ("contacts"."contact_frequency_days" is not null) and "contacts"."contact_frequency_days" between 1 and 365);--> statement-breakpoint
+ALTER TABLE "contacts" ADD CONSTRAINT "contacts_contact_frequency_check" CHECK ("contacts"."contact_frequency" in ('week', 'month', 'quarter', 'year', 'days'));

@@ -152,7 +152,10 @@ async function ContactDetails({
                 phone: contact.phone ?? "",
                 email: contact.email ?? "",
               }}
-              initialFrequency={contact.contactFrequency ?? ""}
+              initialFrequency={{
+                frequency: contact.contactFrequency ?? "",
+                days: contact.contactFrequencyDays?.toString() ?? "",
+              }}
               due={due && describeDue(due)}
               checkIn={
                 due && {

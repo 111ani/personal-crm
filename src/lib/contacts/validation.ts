@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { contactFrequencies } from "@/lib/contacts/frequency";
+import {
+  contactFrequencies,
+  maxFrequencyDays,
+  minFrequencyDays,
+} from "@/lib/contacts/frequency";
 
 // Empty optional fields are stored as NULL, not as empty strings
 const optionalText = (max: number, tooLongMessage: string) =>
@@ -40,10 +44,45 @@ export const contactIdSchema = z.uuid();
 
 export const checkInIdSchema = z.uuid();
 
-// "Не задано" comes from the form as an empty string and is stored as NULL
+const frequencyDaysMessage = `Укажите число дней — от ${minFrequencyDays} до ${maxFrequencyDays}`;
+
+const frequencyDaysSchema = z.coerce
+  .number(frequencyDaysMessage)
+  .int(frequencyDaysMessage)
+  .min(minFrequencyDays, frequencyDaysMessage)
+  .max(maxFrequencyDays, frequencyDaysMessage);
+
+// "Не задано" comes from the form as an empty string and is stored as NULL.
+// The number of days counts only for "days"; the others store NULL there
 export const contactFrequencySchema = z
-  .enum([...contactFrequencies, ""], "Выберите, как часто общаться, из списка")
-  .transform((value) => (value === "" ? null : value));
+  .object({
+    frequency: z.enum(
+      [...contactFrequencies, ""],
+      "Выберите, как часто общаться, из списка",
+    ),
+    days: z.string(),
+  })
+  .transform(({ frequency, days }, ctx) => {
+    if (frequency === "") {
+      return { frequency: null, days: null };
+    }
+    if (frequency !== "days") {
+      return { frequency, days: null };
+    }
+    const parsedDays = frequencyDaysSchema.safeParse(days);
+    if (!parsedDays.success) {
+      ctx.addIssue({
+        code: "custom",
+        message: frequencyDaysMessage,
+        path: ["days"],
+      });
+      return z.NEVER;
+    }
+    return { frequency, days: parsedDays.data };
+  });
+
+// What the frequency field sent, kept as is to show it again after an error
+export type ContactFrequencyValues = { frequency: string; days: string };
 
 export type ContactInput = z.infer<typeof contactSchema>;
 export type ContactField = keyof ContactInput;
@@ -57,9 +96,17 @@ export const contactFields: ContactField[] = [
   "email",
 ];
 
-export function readContactFrequency(formData: FormData) {
-  const value = formData.get("contactFrequency");
-  return typeof value === "string" ? value : "";
+export function readContactFrequency(
+  formData: FormData,
+): ContactFrequencyValues {
+  const read = (key: string) => {
+    const value = formData.get(key);
+    return typeof value === "string" ? value : "";
+  };
+  return {
+    frequency: read("contactFrequency"),
+    days: read("contactFrequencyDays"),
+  };
 }
 
 export function readContactForm(formData: FormData): ContactFormValues {

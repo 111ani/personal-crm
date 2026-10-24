@@ -17,12 +17,14 @@ const dayMonthFormat = new Intl.DateTimeFormat("ru-RU", {
   month: "long",
 });
 
-const frequencyLabels: Record<ContactFrequency, string> = {
+const frequencyLabels: Record<Exclude<ContactFrequency, "days">, string> = {
   week: "раз в неделю",
   month: "раз в месяц",
   quarter: "раз в квартал",
   year: "раз в год",
 };
+
+export const dayForms: [string, string, string] = ["день", "дня", "дней"];
 
 /** Picks the Russian word form for a number: [one, few, many] */
 export function pluralize(
@@ -58,13 +60,25 @@ export function formatDayMonth(date: Date, now: Date) {
     : `${dayMonth} ${date.getFullYear()}`;
 }
 
-/** "раз в месяц" - for the line under a contact's name */
-export function formatFrequency(frequency: ContactFrequency) {
-  return frequencyLabels[frequency];
+/**
+ * "раз в месяц", "раз в 3 дня", "раз в день" - for the line under a
+ * contact's name; `days` is N for the "days" frequency
+ */
+export function formatFrequency(
+  frequency: ContactFrequency,
+  days: number | null,
+) {
+  if (frequency !== "days") {
+    return frequencyLabels[frequency];
+  }
+  return days === 1 ? "раз в день" : `раз в ${formatCount(days ?? 0, dayForms)}`;
 }
 
-/** "Раз в месяц" - for the option in the list */
+/** "Раз в месяц", "Каждые … дней" - for the option in the list */
 export function formatFrequencyOption(frequency: ContactFrequency) {
+  if (frequency === "days") {
+    return "Каждые … дней";
+  }
   const label = frequencyLabels[frequency];
   return label[0].toUpperCase() + label.slice(1);
 }
@@ -82,7 +96,7 @@ export function formatOverdue(days: number) {
     return "срок сегодня";
   }
   if (days < 14) {
-    return overdueBy(days, ["день", "дня", "дней"]);
+    return overdueBy(days, dayForms);
   }
   if (days < 60) {
     return overdueBy(Math.floor(days / 7), ["неделю", "недели", "недель"]);

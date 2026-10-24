@@ -2,13 +2,18 @@ import { sql } from "drizzle-orm";
 import {
   check,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { contactFrequencies } from "../lib/contacts/frequency.ts";
+import {
+  contactFrequencies,
+  maxFrequencyDays,
+  minFrequencyDays,
+} from "../lib/contacts/frequency.ts";
 
 export const contacts = pgTable(
   "contacts",
@@ -22,6 +27,8 @@ export const contacts = pgTable(
     email: text("email"),
     // How often to keep in touch; NULL - not set
     contactFrequency: text("contact_frequency", { enum: contactFrequencies }),
+    // N for the "days" frequency; NULL for the others
+    contactFrequencyDays: integer("contact_frequency_days"),
     // When the frequency was set or changed: the due date counts from it
     // while there are no notes and check-ins
     contactFrequencySetAt: timestamp("contact_frequency_set_at", {
@@ -45,6 +52,10 @@ export const contacts = pgTable(
     check(
       "contacts_contact_frequency_set_at_check",
       sql`(${table.contactFrequency} is null) = (${table.contactFrequencySetAt} is null)`,
+    ),
+    check(
+      "contacts_contact_frequency_days_check",
+      sql`(${table.contactFrequency} is not distinct from 'days') = (${table.contactFrequencyDays} is not null) and ${table.contactFrequencyDays} between ${sql.raw(String(minFrequencyDays))} and ${sql.raw(String(maxFrequencyDays))}`,
     ),
   ],
 );

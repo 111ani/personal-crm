@@ -325,9 +325,13 @@ export function generateSeedData(count: number, now: Date, seed = 20261008) {
     // About 15% keep in touch: the frequency was set some time after the
     // contact was added, and some were ticked "Связались" once or twice since
     let contactFrequency: ContactFrequency | null = null;
+    let contactFrequencyDays: number | null = null;
     let contactFrequencySetAt: Date | null = null;
     if (keepInTouchRandom.chance(0.15)) {
       contactFrequency = keepInTouchRandom.pick(contactFrequencies);
+      if (contactFrequency === "days") {
+        contactFrequencyDays = keepInTouchRandom.int(2, 14);
+      }
       contactFrequencySetAt = randomDateBetween(keepInTouchRandom, createdAt, now);
       if (contactFrequencySetAt < yesterday && keepInTouchRandom.chance(0.4)) {
         const checkInCount = keepInTouchRandom.int(1, 2);
@@ -355,6 +359,7 @@ export function generateSeedData(count: number, now: Date, seed = 20261008) {
       phone: random.chance(0.85) ? makePhone(random) : null,
       email: random.chance(0.65) ? makeEmail(random, firstName, lastName) : null,
       contactFrequency,
+      contactFrequencyDays,
       contactFrequencySetAt,
       createdAt,
       // Setting the frequency is an edit of the contact
