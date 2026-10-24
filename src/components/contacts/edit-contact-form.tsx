@@ -11,7 +11,10 @@ import {
   type DueLine,
 } from "@/components/contacts/contact-frequency-field";
 import { Button } from "@/components/ui/button";
-import type { ContactFormValues } from "@/lib/contacts/validation";
+import type {
+  ContactFormValues,
+  ContactFrequencyValues,
+} from "@/lib/contacts/validation";
 
 export function EditContactForm({
   contactId,
@@ -22,7 +25,7 @@ export function EditContactForm({
 }: {
   contactId: string;
   initialValues: ContactFormValues;
-  initialFrequency: string;
+  initialFrequency: ContactFrequencyValues;
   due: DueLine | null;
   // Only when a frequency is saved
   checkIn: { checkedInToday: boolean; lastCheckIn: string | null } | null;
@@ -47,6 +50,8 @@ export function EditContactForm({
       ? state.frequency
       : initialFrequency;
   const errors = state.status === "error" ? state.fieldErrors : {};
+  const frequencyError =
+    state.status === "error" ? state.frequencyError : undefined;
   const formId = `contact-${contactId}`;
 
   return (
@@ -59,9 +64,13 @@ export function EditContactForm({
           disabled={isPending}
         />
         <ContactFrequencyField
+          // A select applies its default only on mount: remount the field
+          // when the values change, so the form reset after saving shows them
+          key={`${frequency.frequency}:${frequency.days}`}
           id={`${formId}-contactFrequency`}
-          defaultValue={frequency}
+          defaultValues={frequency}
           due={due}
+          daysError={frequencyError}
           disabled={isPending}
         />
       </form>

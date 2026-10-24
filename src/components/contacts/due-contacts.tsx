@@ -27,7 +27,7 @@ export async function DueContacts({
       contacts={contacts.map((contact) => ({
         id: contact.id,
         name: contact.name,
-        frequency: formatFrequency(contact.frequency),
+        frequency: formatFrequency(contact.frequency, contact.frequencyDays),
         overdue: formatOverdue(contact.overdueDays),
       }))}
     />
