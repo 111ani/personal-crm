@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { z } from "zod";
 
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { contactCheckIns, contacts, notes } from "@/db/schema";
 import { startOfToday } from "@/lib/contacts/queries";
 import {
@@ -88,7 +88,7 @@ export async function createContact(
   }
 
   try {
-    const [created] = await db
+    const [created] = await getDb()
       .insert(contacts)
       .values(parsed.data)
       .returning({ id: contacts.id, name: contacts.name });
@@ -145,7 +145,7 @@ export async function updateContact(
     frequency.data;
 
   try {
-    const [updated] = await db
+    const [updated] = await getDb()
       .update(contacts)
       .set({
         ...parsed.data,
@@ -186,7 +186,7 @@ export async function deleteContact(
   try {
     // Notes go too: notes.contact_id is ON DELETE CASCADE. A contact that
     // is already gone is not an error - the user gets what they wanted
-    await db.delete(contacts).where(eq(contacts.id, id.data));
+    await getDb().delete(contacts).where(eq(contacts.id, id.data));
   } catch (error) {
     console.error("Failed to delete contact", error);
     return { status: "error", message: "Не удалось удалить. Попробуйте ещё раз" };
@@ -222,7 +222,7 @@ export async function addNote(
   }
 
   try {
-    const inserted = await db.transaction(async (tx) => {
+    const inserted = await getDb().transaction(async (tx) => {
       const [contact] = await tx
         .update(contacts)
         .set({ updatedAt: sql`now()` })
@@ -261,7 +261,7 @@ export async function checkIn(contactId: string): Promise<CheckInResult> {
   }
 
   try {
-    const [created] = await db
+    const [created] = await getDb()
       .insert(contactCheckIns)
       .values({ contactId: id.data })
       .returning({ id: contactCheckIns.id });
@@ -285,7 +285,9 @@ export async function undoCheckIn(
 
   try {
     // A check-in that is already gone is not an error
-    await db.delete(contactCheckIns).where(eq(contactCheckIns.id, id.data));
+    await getDb()
+      .delete(contactCheckIns)
+      .where(eq(contactCheckIns.id, id.data));
   } catch (error) {
     console.error("Failed to undo check-in", error);
     return { status: "error", message: SAVE_FAILED };
@@ -305,7 +307,7 @@ export async function clearTodayCheckIns(
   }
 
   try {
-    await db
+    await getDb()
       .delete(contactCheckIns)
       .where(
         and(

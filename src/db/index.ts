@@ -5,20 +5,24 @@ import { Pool } from "pg";
 
 import * as schema from "./schema";
 
-// Reuse one pool across hot reloads in development
-const globalForDb = globalThis as unknown as { pgPool?: Pool };
-
-function createPool() {
+function createDb() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set. Copy .env.example to .env");
   }
-  return new Pool({ connectionString, max: 10 });
+  return drizzle(new Pool({ connectionString, max: 10 }), { schema });
 }
 
-const pool = globalForDb.pgPool ?? createPool();
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.pgPool = pool;
-}
+// One pool per process, also across hot reloads in development
+const globalForDb = globalThis as unknown as {
+  db?: ReturnType<typeof createDb>;
+};
 
-export const db = drizzle(pool, { schema });
+/**
+ * The database, created on the first call rather than on import: the build
+ * loads this module but never queries, so it runs without DATABASE_URL.
+ */
+export function getDb() {
+  globalForDb.db ??= createDb();
+  return globalForDb.db;
+}
