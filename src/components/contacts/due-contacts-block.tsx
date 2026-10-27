@@ -11,11 +11,16 @@ import { toast } from "sonner";
 
 import { checkIn, undoCheckIn } from "@/app/actions";
 import { ContactAvatar } from "@/components/contacts/contact-avatar";
+import { cn } from "@/lib/utils";
 
 const COLLAPSED_COUNT = 5;
 
 // Longer than the app's other messages: time to press "Отменить"
 const UNDO_DURATION_MS = 6000;
+
+// A ticked row stays in place this long, so a quick second tap lands on the
+// same tick and not on the next row's
+const HIDE_DELAY_MS = 500;
 
 export type DueContactRow = {
   id: string;
@@ -27,9 +32,14 @@ export type DueContactRow = {
 };
 
 export function DueContactsBlock({ contacts }: { contacts: DueContactRow[] }) {
-  // A checked-in row hides at once; if checking in fails, it comes back
+  // A checked-in row hides after a pause; if checking in fails, it comes back
   const [rows, hideRow] = useOptimistic(contacts, (current, id: string) =>
     current.filter((row) => row.id !== id),
+  );
+  // Rows ticked but not hidden yet
+  const [tickedIds, tickRow] = useOptimistic<string[], string>(
+    [],
+    (current, id) => [...current, id],
   );
   const [expanded, setExpanded] = useState(false);
   const [, startTransition] = useTransition();
@@ -43,8 +53,12 @@ export function DueContactsBlock({ contacts }: { contacts: DueContactRow[] }) {
 
   function handleCheckIn(row: DueContactRow) {
     startTransition(async () => {
-      hideRow(row.id);
-      const result = await checkIn(row.id);
+      tickRow(row.id);
+      const saving = checkIn(row.id);
+      await new Promise((resolve) => setTimeout(resolve, HIDE_DELAY_MS));
+      // React forgets the transition after an await, so start it again
+      startTransition(() => hideRow(row.id));
+      const result = await saving;
       if (result.status === "error") {
         toast.error(result.message);
         return;
@@ -103,10 +117,18 @@ export function DueContactsBlock({ contacts }: { contacts: DueContactRow[] }) {
               <button
                 type="button"
                 onClick={() => handleCheckIn(row)}
+                disabled={tickedIds.includes(row.id)}
                 aria-label={`Отметить, что связались: ${row.name}`}
                 className="flex size-11 shrink-0 items-center justify-center rounded-full text-primary transition-colors outline-none hover:bg-secondary hover:text-brand focus-visible:ring-3 focus-visible:ring-ring/50"
               >
-                <CircleCheckIcon className="size-7 [&_path]:stroke-input" />
+                <CircleCheckIcon
+                  className={cn(
+                    "size-7",
+                    tickedIds.includes(row.id)
+                      ? "fill-brand text-brand [&_path]:stroke-primary-foreground"
+                      : "[&_path]:stroke-input",
+                  )}
+                />
               </button>
             </li>
           ))}
