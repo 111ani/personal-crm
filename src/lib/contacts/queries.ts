@@ -11,8 +11,9 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
+import { QueryBuilder } from "drizzle-orm/pg-core";
 
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { contactCheckIns, contacts, notes } from "@/db/schema";
 import type { ContactFrequency } from "@/lib/contacts/frequency";
 
@@ -68,9 +69,10 @@ const lastCheckInAt = sql`(select max(${contactCheckIns.createdAt}) from ${conta
  * Contacts with a frequency and the moment they are due: the start of the day
  * the interval runs out after the latest note or check-in, or after the
  * frequency was set if there were neither. The one rule for the home block
- * and the card, so both always show the same overdue.
+ * and the card, so both always show the same overdue. Built without a
+ * database connection: it is only a subquery for the queries below.
  */
-const contactsWithDue = db
+const contactsWithDue = new QueryBuilder()
   .select({
     id: contacts.id,
     name: contacts.name,
@@ -113,7 +115,7 @@ export async function listContacts(query: string): Promise<ContactListItem[]> {
     ilike(contacts.name, `%${escapeLike(word)}%`),
   );
 
-  return db
+  return getDb()
     .select({
       id: contacts.id,
       name: contacts.name,
@@ -127,13 +129,13 @@ export async function listContacts(query: string): Promise<ContactListItem[]> {
 }
 
 export async function countContacts(): Promise<number> {
-  const [row] = await db.select({ value: count() }).from(contacts);
+  const [row] = await getDb().select({ value: count() }).from(contacts);
   return row?.value ?? 0;
 }
 
 /** Contacts whose due moment has come: the longest overdue first */
 export async function listDueContacts(): Promise<DueContact[]> {
-  return db
+  return getDb()
     .select({
       id: contactsWithDue.id,
       name: contactsWithDue.name,
@@ -151,7 +153,7 @@ export async function listDueContacts(): Promise<DueContact[]> {
 }
 
 export async function getContactWithNotes(id: string) {
-  const [contact] = await db
+  const [contact] = await getDb()
     .select()
     .from(contacts)
     .where(eq(contacts.id, id))
@@ -162,13 +164,13 @@ export async function getContactWithNotes(id: string) {
   }
 
   const [contactNotes, dueRows] = await Promise.all([
-    db
+    getDb()
       .select()
       .from(notes)
       .where(eq(notes.contactId, id))
       .orderBy(desc(notes.createdAt), desc(notes.id)),
     // No row if the contact has no frequency
-    db
+    getDb()
       .select({
         dueAt: contactsWithDue.dueAt,
         isDue,

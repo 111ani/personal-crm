@@ -18,10 +18,7 @@ RUN pnpm install --frozen-lockfile --prod
 
 FROM deps AS build
 COPY . .
-# src/db requires DATABASE_URL on import, but the build never connects:
-# pages read data at request time. The real URL comes when the app starts
-RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm build && \
-    rm -rf .next/cache
+RUN pnpm build && rm -rf .next/cache
 
 FROM node:24-alpine AS runner
 LABEL org.opencontainers.image.source=https://github.com/111ani/personal-crm
