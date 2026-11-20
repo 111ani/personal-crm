@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { PlusIcon } from "lucide-react";
 
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
@@ -17,6 +18,9 @@ import { listGroups } from "@/lib/groups/queries";
 
 // The "Новый контакт" window needs the groups for its "Группы" field
 async function AddContact() {
+  // Read the groups on every request, not once at build time: the build
+  // (in CI) has no database, and the list changes all the time
+  await connection();
   const groups = await listGroups();
   return (
     <AddContactDialog groups={groups.map(({ id, name }) => ({ id, name }))} />

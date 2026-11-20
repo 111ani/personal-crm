@@ -16,7 +16,10 @@ export async function GroupFilter({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [params, groups] = await Promise.all([searchParams, listGroups()]);
+  // The address first: until it is known the page is built without a
+  // request, and the database must not be asked (the build has none)
+  const params = await searchParams;
+  const groups = await listGroups();
   if (groups.length === 0) {
     return null;
   }
