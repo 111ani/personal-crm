@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { PlusIcon } from "lucide-react";
 
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
 import {
@@ -10,6 +11,27 @@ import {
   SearchInput,
   SearchInputFallback,
 } from "@/components/contacts/search-input";
+import { GroupFilter } from "@/components/groups/group-filter";
+import { Button } from "@/components/ui/button";
+import { listGroups } from "@/lib/groups/queries";
+
+// The "Новый контакт" window needs the groups for its "Группы" field
+async function AddContact() {
+  const groups = await listGroups();
+  return (
+    <AddContactDialog groups={groups.map(({ id, name }) => ({ id, name }))} />
+  );
+}
+
+// The same button, not active until the groups are read
+function AddContactButtonFallback() {
+  return (
+    <Button size="lg" disabled>
+      <PlusIcon />
+      Добавить контакт
+    </Button>
+  );
+}
 
 export default function ContactsPage({ searchParams }: PageProps<"/">) {
   return (
@@ -25,8 +47,15 @@ export default function ContactsPage({ searchParams }: PageProps<"/">) {
         <Suspense fallback={<SearchInputFallback />}>
           <SearchInput />
         </Suspense>
-        <AddContactDialog />
+        <Suspense fallback={<AddContactButtonFallback />}>
+          <AddContact />
+        </Suspense>
       </div>
+
+      {/* No placeholder: with no groups there is no row at all */}
+      <Suspense>
+        <GroupFilter searchParams={searchParams} />
+      </Suspense>
 
       {/* No placeholder: the block may well not be there at all */}
       <Suspense>

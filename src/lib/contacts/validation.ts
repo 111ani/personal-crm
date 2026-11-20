@@ -122,3 +122,15 @@ export function readContactForm(formData: FormData): ContactFormValues {
     email: read("email"),
   };
 }
+
+// Ids of the ticked groups: one hidden field `groupIds` per ticked label.
+// No repeats: the same group twice can only come from a tampered form
+export const groupIdsSchema = z
+  .array(z.uuid())
+  .refine((ids) => new Set(ids).size === ids.length);
+
+export function readGroupIds(formData: FormData): string[] {
+  return formData
+    .getAll("groupIds")
+    .filter((value): value is string => typeof value === "string");
+}

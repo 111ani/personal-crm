@@ -1,6 +1,6 @@
 // Fills the database with test contacts.
 //   pnpm db:seed          - only if the database has no contacts yet
-//   pnpm db:seed --reset  - DELETES all contacts, notes and check-ins, then seeds
+//   pnpm db:seed --reset  - DELETES all contacts, notes, check-ins and groups, then seeds
 
 import { existsSync } from "node:fs";
 
@@ -8,7 +8,13 @@ import { count } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-import { contactCheckIns, contacts, notes } from "../src/db/schema.ts";
+import {
+  contactCheckIns,
+  contactGroups,
+  contacts,
+  groups,
+  notes,
+} from "../src/db/schema.ts";
 import { generateSeedData } from "./seed-data.ts";
 
 const CONTACT_COUNT = 1000;
@@ -48,13 +54,20 @@ async function main() {
       return;
     }
 
-    const { contactRows, noteRows, checkInRows } = generateSeedData(
-      CONTACT_COUNT,
-      new Date(),
-    );
+    // Groups the user made by hand must not clash with the test ones: they
+    // are replaced only on --reset
+    const [{ value: existingGroups }] = await db
+      .select({ value: count() })
+      .from(groups);
+    const seedGroups = reset || existingGroups === 0;
+
+    const { contactRows, noteRows, checkInRows, groupRows, contactGroupRows } =
+      generateSeedData(CONTACT_COUNT, new Date());
 
     await db.transaction(async (tx) => {
       if (reset) {
+        await tx.delete(contactGroups);
+        await tx.delete(groups);
         await tx.delete(contactCheckIns);
         await tx.delete(notes);
         await tx.delete(contacts);
@@ -68,11 +81,20 @@ async function main() {
       for (const batch of chunk(checkInRows, BATCH_SIZE)) {
         await tx.insert(contactCheckIns).values(batch);
       }
+      if (seedGroups) {
+        await tx.insert(groups).values(groupRows);
+        for (const batch of chunk(contactGroupRows, BATCH_SIZE)) {
+          await tx.insert(contactGroups).values(batch);
+        }
+      }
     });
 
     console.log(
       `Seeded ${contactRows.length} contacts, ${noteRows.length} notes ` +
-        `and ${checkInRows.length} check-ins`,
+        `and ${checkInRows.length} check-ins` +
+        (seedGroups
+          ? `, ${groupRows.length} groups with ${contactGroupRows.length} memberships`
+          : `; groups were left as they are (the database already has some)`),
     );
   } finally {
     await pool.end();

@@ -6,14 +6,10 @@ import { ScrollIntoView } from "@/components/contacts/scroll-into-view";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countContacts, listContacts } from "@/lib/contacts/queries";
-import { formatCount } from "@/lib/format";
+import { formatEmptyList, formatListCounter } from "@/lib/format";
+import { parseHomeParams } from "@/lib/groups/home-params";
+import { listGroups } from "@/lib/groups/queries";
 import { cn } from "@/lib/utils";
-
-const CONTACT_FORMS: [string, string, string] = [
-  "контакт",
-  "контакта",
-  "контактов",
-];
 
 // Phone and email columns only from `lg`: on tablets they would squeeze the name
 const rowGrid =
@@ -24,16 +20,27 @@ export async function ContactList({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams;
-  const query = typeof params.q === "string" ? params.q.trim() : "";
+  const [params, allGroups] = await Promise.all([searchParams, listGroups()]);
+  const { query, groupId } = parseHomeParams(
+    params,
+    allGroups.map((group) => group.id),
+  );
+  const group = allGroups.find((item) => item.id === groupId);
   const highlightId = typeof params.new === "string" ? params.new : null;
 
+  // With a group, everything is about the people of that group
   const [items, total] = await Promise.all([
-    listContacts(query),
-    countContacts(),
+    listContacts(query, groupId ?? undefined),
+    countContacts(groupId ?? undefined),
   ]);
 
   if (total === 0) {
+    if (group) {
+      const empty = formatEmptyList({ query, groupName: group.name, total });
+      return (
+        <EmptyState icon={<UsersIcon />} title={empty.title} text={empty.text} />
+      );
+    }
     return (
       <EmptyState
         icon={<UsersIcon />}
@@ -49,16 +56,18 @@ export async function ContactList({
         className="text-eyebrow font-semibold text-brand uppercase"
         aria-live="polite"
       >
-        {query
-          ? `Найдено: ${formatCount(items.length, CONTACT_FORMS)} из ${total.toLocaleString("ru-RU")}`
-          : `Всего ${formatCount(total, CONTACT_FORMS)}`}
+        {formatListCounter({
+          query,
+          found: items.length,
+          total,
+          groupName: group?.name,
+        })}
       </p>
 
       {items.length === 0 ? (
         <EmptyState
           icon={<SearchXIcon />}
-          title={`По запросу «${query}» никого не нашли`}
-          text="Проверьте, как написано имя, или добавьте новый контакт."
+          {...formatEmptyList({ query, groupName: group?.name, total })}
         />
       ) : (
         <div className="overflow-hidden rounded-card bg-card ring-1 ring-border">

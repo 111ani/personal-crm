@@ -26,6 +26,12 @@ const frequencyLabels: Record<Exclude<ContactFrequency, "days">, string> = {
 
 export const dayForms: [string, string, string] = ["день", "дня", "дней"];
 
+export const contactForms: [string, string, string] = [
+  "контакт",
+  "контакта",
+  "контактов",
+];
+
 /** Picks the Russian word form for a number: [one, few, many] */
 export function pluralize(
   count: number,
@@ -46,6 +52,11 @@ export function formatCount(
   forms: [string, string, string],
 ) {
   return `${numberFormat.format(count)} ${pluralize(count, forms)}`;
+}
+
+/** "4 контакта" for a group's row; "пока никого" for an empty group */
+export function formatGroupSize(count: number) {
+  return count === 0 ? "пока никого" : formatCount(count, contactForms);
 }
 
 export function formatDateTime(date: Date) {
@@ -111,4 +122,51 @@ export function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const letters = parts.slice(0, 2).map((part) => part[0]);
   return letters.join("").toUpperCase() || "?";
+}
+
+/**
+ * The line above the contact list: "Всего 3 контакта в группе «Семья»", or
+ * with a search "Найдено: 1 контакт из 2 в группе «Теннис»". `total` is how
+ * many people there are in the group (or in all, when no group is selected)
+ */
+export function formatListCounter({
+  query,
+  found,
+  total,
+  groupName,
+}: {
+  query: string;
+  found: number;
+  total: number;
+  groupName?: string;
+}) {
+  const inGroup = groupName ? ` в группе «${groupName}»` : "";
+  return query
+    ? `Найдено: ${formatCount(found, contactForms)} из ${numberFormat.format(total)}${inGroup}`
+    : `Всего ${formatCount(total, contactForms)}${inGroup}`;
+}
+
+/**
+ * What the list says when it is empty. `total` is how many people the list
+ * has before the search: an empty group is "пока никого", not "не нашли"
+ */
+export function formatEmptyList({
+  query,
+  groupName,
+  total,
+}: {
+  query: string;
+  groupName?: string;
+  total: number;
+}) {
+  if (groupName && total === 0) {
+    return {
+      title: `В группе «${groupName}» пока никого нет`,
+      text: "Отметьте эту группу в карточке человека или при добавлении контакта.",
+    };
+  }
+  return {
+    title: `По запросу «${query}»${groupName ? ` в группе «${groupName}»` : ""} никого не нашли`,
+    text: "Проверьте, как написано имя, или добавьте новый контакт.",
+  };
 }

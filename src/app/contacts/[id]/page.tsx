@@ -28,6 +28,7 @@ import {
   type ContactDue,
 } from "@/lib/contacts/queries";
 import { contactIdSchema } from "@/lib/contacts/validation";
+import { listGroups } from "@/lib/groups/queries";
 import {
   formatCount,
   formatDateTime,
@@ -66,11 +67,14 @@ async function ContactDetails({
     notFound();
   }
 
-  const data = await getContactWithNotes(id);
+  const [data, allGroups] = await Promise.all([
+    getContactWithNotes(id),
+    listGroups(),
+  ]);
   if (!data) {
     notFound();
   }
-  const { contact, notes, due } = data;
+  const { contact, notes, due, groupIds } = data;
 
   return (
     <>
@@ -156,6 +160,8 @@ async function ContactDetails({
                 frequency: contact.contactFrequency ?? "",
                 days: contact.contactFrequencyDays?.toString() ?? "",
               }}
+              groups={allGroups.map(({ id, name }) => ({ id, name }))}
+              initialGroupIds={groupIds}
               due={due && describeDue(due)}
               checkIn={
                 due && {
