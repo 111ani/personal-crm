@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { ArrowLeftIcon, UsersIcon } from "lucide-react";
 
 import { GroupRow } from "@/components/groups/group-row";
@@ -35,6 +36,9 @@ export default function GroupsPage() {
 }
 
 async function GroupList() {
+  // Read the groups on every request, not once at build time: the build
+  // (in CI) has no database, and the list changes all the time
+  await connection();
   const groups = await listGroups();
 
   if (groups.length === 0) {

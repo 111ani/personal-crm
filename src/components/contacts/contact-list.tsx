@@ -20,7 +20,10 @@ export async function ContactList({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [params, allGroups] = await Promise.all([searchParams, listGroups()]);
+  // The address first: until it is known the page is built without a
+  // request, and the database must not be asked (the build has none)
+  const params = await searchParams;
+  const allGroups = await listGroups();
   const { query, groupId } = parseHomeParams(
     params,
     allGroups.map((group) => group.id),
