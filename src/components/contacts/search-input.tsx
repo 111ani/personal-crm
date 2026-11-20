@@ -6,6 +6,7 @@ import { Loader2Icon, SearchIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { buildHomeUrl } from "@/lib/groups/home-params";
 
 const DEBOUNCE_MS = 250;
 
@@ -13,6 +14,13 @@ export function SearchInput() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get("q") ?? "";
+  // The selected group stays when the search text changes. A ref, because a
+  // search typed a moment ago fires later and must see the latest group
+  const urlGroup = searchParams.get("group");
+  const groupRef = useRef(urlGroup);
+  useEffect(() => {
+    groupRef.current = urlGroup;
+  }, [urlGroup]);
 
   const [value, setValue] = useState(urlQuery);
   const [seenUrlQuery, setSeenUrlQuery] = useState(urlQuery);
@@ -39,7 +47,7 @@ export function SearchInput() {
     const query = nextValue.trim();
     setRequestedQuery(query);
     startTransition(() => {
-      router.replace(query ? `/?q=${encodeURIComponent(query)}` : "/", {
+      router.replace(buildHomeUrl({ q: query, group: groupRef.current }), {
         scroll: false,
       });
     });

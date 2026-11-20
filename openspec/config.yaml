@@ -20,10 +20,12 @@ rules:
     - Product decisions belong to the user. Anything not covered by the product idea or existing specs goes to an "Открытые вопросы" section instead of being decided silently
   specs:
     - Every requirement has scenarios a person can check by hand in the app, written as steps and the expected result
+    - Every scenario has its own test
   design:
     - Separate decisions the agent made on its own from open questions to the user
   tasks:
     - If the data model changes, include a task for the Drizzle migration and say what happens to existing data
+    - Test before code - write the test, run it and see it fail, then write the code and see the test pass
 
 # Per-operation guidance (optional)
 # Add advisory guidance for how apply and archive work should be conducted.

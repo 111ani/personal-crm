@@ -7,6 +7,8 @@ import { randomUUID } from "node:crypto";
 import type {
   NewContact,
   NewContactCheckIn,
+  NewContactGroup,
+  NewGroup,
   NewNote,
 } from "../src/db/schema.ts";
 import {
@@ -278,14 +280,29 @@ function pickNoteCount(random: Random) {
   return 0;
 }
 
+const groupNames = [
+  "Семья",
+  "Друзья",
+  "Знакомые",
+  "Теннис",
+  "Аналитики",
+  "Работа",
+];
+
 export function generateSeedData(count: number, now: Date, seed = 20261008) {
   const random = createRandom(seed);
-  // Its own generator, so the people and notes stay the same as before
-  // keep-in-touch data was added
+  // Its own generators, so the people and notes stay the same as before
+  // keep-in-touch data and groups were added
   const keepInTouchRandom = createRandom(seed + 1);
+  const groupRandom = createRandom(seed + 2);
   const contactRows: NewContact[] = [];
   const noteRows: NewNote[] = [];
   const checkInRows: NewContactCheckIn[] = [];
+  const groupRows: NewGroup[] = groupNames.map((name) => ({
+    id: randomUUID(),
+    name,
+  }));
+  const contactGroupRows: NewContactGroup[] = [];
   const usedNames = new Set<string>();
   const fourYearsAgo = new Date(now.getTime() - 4 * 365 * 24 * 60 * 60 * 1000);
   // Check-ins are in the past: none of them is today
@@ -348,6 +365,18 @@ export function generateSeedData(count: number, now: Date, seed = 20261008) {
       }
     }
 
+    // About 60% are in one group, a third of them also in a second one
+    if (groupRandom.chance(0.6)) {
+      const first = groupRandom.pick(groupRows);
+      contactGroupRows.push({ contactId: id, groupId: first.id! });
+      if (groupRandom.chance(0.33)) {
+        const second = groupRandom.pick(
+          groupRows.filter((group) => group.id !== first.id),
+        );
+        contactGroupRows.push({ contactId: id, groupId: second.id! });
+      }
+    }
+
     const lastNoteAt = noteDates.at(-1) ?? createdAt;
     contactRows.push({
       id,
@@ -370,5 +399,5 @@ export function generateSeedData(count: number, now: Date, seed = 20261008) {
     });
   }
 
-  return { contactRows, noteRows, checkInRows };
+  return { contactRows, noteRows, checkInRows, groupRows, contactGroupRows };
 }

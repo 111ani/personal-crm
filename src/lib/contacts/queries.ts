@@ -6,6 +6,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   ilike,
   isNotNull,
   sql,
@@ -14,7 +15,7 @@ import {
 import { QueryBuilder } from "drizzle-orm/pg-core";
 
 import { getDb } from "@/db";
-import { contactCheckIns, contacts, notes } from "@/db/schema";
+import { contactCheckIns, contactGroups, contacts, notes } from "@/db/schema";
 import type { ContactFrequency } from "@/lib/contacts/frequency";
 
 export type ContactListItem = Pick<
@@ -105,15 +106,38 @@ function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
+// "Is in this group": a person is in a group at most once (the key of
+// contact_groups is the pair), so this never repeats a contact
+function inGroup(groupId: string) {
+  return exists(
+    getDb()
+      .select({ one: sql`1` })
+      .from(contactGroups)
+      .where(
+        and(
+          eq(contactGroups.contactId, contacts.id),
+          eq(contactGroups.groupId, groupId),
+        ),
+      ),
+  );
+}
+
 /**
  * Lists contacts sorted by name. Each word of the query must occur in the
- * name, so "Смирнова Анна" finds "Анна Смирнова".
+ * name, so "Смирнова Анна" finds "Анна Смирнова". With a group - only the
+ * people of that group.
  */
-export async function listContacts(query: string): Promise<ContactListItem[]> {
+export async function listContacts(
+  query: string,
+  groupId?: string,
+): Promise<ContactListItem[]> {
   const words = query.trim().split(/\s+/).filter(Boolean).slice(0, 5);
   const filters = words.map((word) =>
     ilike(contacts.name, `%${escapeLike(word)}%`),
   );
+  if (groupId) {
+    filters.push(inGroup(groupId));
+  }
 
   return getDb()
     .select({
@@ -128,8 +152,12 @@ export async function listContacts(query: string): Promise<ContactListItem[]> {
     .orderBy(asc(contacts.name), asc(contacts.id));
 }
 
-export async function countContacts(): Promise<number> {
-  const [row] = await getDb().select({ value: count() }).from(contacts);
+/** How many contacts there are; with a group - how many people in it */
+export async function countContacts(groupId?: string): Promise<number> {
+  const [row] = await getDb()
+    .select({ value: count() })
+    .from(contacts)
+    .where(groupId ? inGroup(groupId) : undefined);
   return row?.value ?? 0;
 }
 
@@ -163,7 +191,7 @@ export async function getContactWithNotes(id: string) {
     return null;
   }
 
-  const [contactNotes, dueRows] = await Promise.all([
+  const [contactNotes, dueRows, groupRows] = await Promise.all([
     getDb()
       .select()
       .from(notes)
@@ -181,8 +209,15 @@ export async function getContactWithNotes(id: string) {
       })
       .from(contactsWithDue)
       .where(eq(contactsWithDue.id, id)),
+    // The groups this person is in: the ticked labels of the "Группы" field
+    getDb()
+      .select({ groupId: contactGroups.groupId })
+      .from(contactGroups)
+      .where(eq(contactGroups.contactId, id)),
   ]);
   const due: ContactDue | null = dueRows[0] ?? null;
 
-  return { contact, notes: contactNotes, due };
+  const groupIds = groupRows.map((row) => row.groupId);
+
+  return { contact, notes: contactNotes, due, groupIds };
 }

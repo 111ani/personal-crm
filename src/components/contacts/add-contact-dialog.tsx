@@ -5,8 +5,13 @@ import { useRouter } from "next/navigation";
 import { PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { createContact, type ContactFormState } from "@/app/actions";
+import {
+  createContact,
+  type ContactFormState,
+  type GroupSummary,
+} from "@/app/actions";
 import { ContactFields } from "@/components/contacts/contact-fields";
+import { ContactGroupsField } from "@/components/contacts/contact-groups-field";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,7 +33,7 @@ const emptyValues: ContactFormValues = {
   email: "",
 };
 
-export function AddContactDialog() {
+export function AddContactDialog({ groups }: { groups: GroupSummary[] }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -45,13 +50,19 @@ export function AddContactDialog() {
           </DialogDescription>
         </DialogHeader>
         {/* Mounted only while the dialog is open, so each opening starts clean */}
-        <AddContactForm onCreated={() => setOpen(false)} />
+        <AddContactForm groups={groups} onCreated={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   );
 }
 
-function AddContactForm({ onCreated }: { onCreated: () => void }) {
+function AddContactForm({
+  groups,
+  onCreated,
+}: {
+  groups: GroupSummary[];
+  onCreated: () => void;
+}) {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
     async (prev: ContactFormState, formData: FormData) => {
@@ -82,6 +93,11 @@ function AddContactForm({ onCreated }: { onCreated: () => void }) {
         errors={errors}
         disabled={isPending}
         autoFocus
+      />
+      <ContactGroupsField
+        groups={groups}
+        initialGroupIds={[]}
+        disabled={isPending}
       />
       {formError && (
         <p role="alert" className="text-sm text-destructive">

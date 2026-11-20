@@ -4,8 +4,10 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -100,8 +102,44 @@ export const contactCheckIns = pgTable(
   ],
 );
 
+// Groups of contacts ("Семья", "Теннис"): circles of people. Names are unique
+// regardless of letter case: the database itself refuses "Теннис" next to "теннис"
+export const groups = pgTable(
+  "groups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [uniqueIndex("groups_name_lower_idx").on(sql`lower(${table.name})`)],
+);
+
+// Which contact is in which group: many to many. A link goes away together
+// with its contact or its group
+export const contactGroups = pgTable(
+  "contact_groups",
+  {
+    contactId: uuid("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.contactId, table.groupId] }),
+    // For "all contacts of a group"
+    index("contact_groups_group_id_idx").on(table.groupId),
+  ],
+);
+
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
 export type Note = typeof notes.$inferSelect;
 export type NewNote = typeof notes.$inferInsert;
 export type NewContactCheckIn = typeof contactCheckIns.$inferInsert;
+export type Group = typeof groups.$inferSelect;
+export type NewGroup = typeof groups.$inferInsert;
+export type NewContactGroup = typeof contactGroups.$inferInsert;

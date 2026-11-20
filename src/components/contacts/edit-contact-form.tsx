@@ -3,9 +3,14 @@
 import { useActionState } from "react";
 import { toast } from "sonner";
 
-import { updateContact, type ContactFormState } from "@/app/actions";
+import {
+  updateContact,
+  type ContactFormState,
+  type GroupSummary,
+} from "@/app/actions";
 import { CheckInToggle } from "@/components/contacts/check-in-toggle";
 import { ContactFields } from "@/components/contacts/contact-fields";
+import { ContactGroupsField } from "@/components/contacts/contact-groups-field";
 import {
   ContactFrequencyField,
   type DueLine,
@@ -20,12 +25,16 @@ export function EditContactForm({
   contactId,
   initialValues,
   initialFrequency,
+  groups,
+  initialGroupIds,
   due,
   checkIn,
 }: {
   contactId: string;
   initialValues: ContactFormValues;
   initialFrequency: ContactFrequencyValues;
+  groups: GroupSummary[];
+  initialGroupIds: string[];
   due: DueLine | null;
   // Only when a frequency is saved
   checkIn: { checkedInToday: boolean; lastCheckIn: string | null } | null;
@@ -61,6 +70,11 @@ export function EditContactForm({
           idPrefix={formId}
           values={values}
           errors={errors}
+          disabled={isPending}
+        />
+        <ContactGroupsField
+          groups={groups}
+          initialGroupIds={initialGroupIds}
           disabled={isPending}
         />
         <ContactFrequencyField
