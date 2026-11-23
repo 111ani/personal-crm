@@ -98,10 +98,6 @@ describe("Поле «Группы» в карточке контакта", () =>
     ).toEqual(["Друзья — 1 контакт", "Теннис — пока никого"]);
   });
 
-  // The labels live only in the form until "Сохранить изменения": nothing is
-  // sent, so there is nothing to run here. Checked by hand (task 4.3)
-  test.todo("Без сохранения группы не меняются");
-
   test("Ошибка в другом поле не сбрасывает группы", async () => {
     const contactId = await insertContact("Анна");
     const familyId = await insertGroup("Семья");
