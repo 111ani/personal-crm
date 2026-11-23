@@ -32,11 +32,7 @@ export function GroupRow({
   return (
     <li className="px-4 py-4 md:px-6">
       {isRenaming ? (
-        <RenameForm
-          id={id}
-          name={name}
-          onDone={() => setIsRenaming(false)}
-        />
+        <RenameForm id={id} name={name} onDone={() => setIsRenaming(false)} />
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <p className="min-w-0 font-heading text-name font-medium break-words">

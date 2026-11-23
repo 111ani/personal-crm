@@ -47,10 +47,7 @@ export function pluralize(
   }
 }
 
-export function formatCount(
-  count: number,
-  forms: [string, string, string],
-) {
+export function formatCount(count: number, forms: [string, string, string]) {
   return `${numberFormat.format(count)} ${pluralize(count, forms)}`;
 }
 
@@ -82,7 +79,9 @@ export function formatFrequency(
   if (frequency !== "days") {
     return frequencyLabels[frequency];
   }
-  return days === 1 ? "раз в день" : `раз в ${formatCount(days ?? 0, dayForms)}`;
+  return days === 1
+    ? "раз в день"
+    : `раз в ${formatCount(days ?? 0, dayForms)}`;
 }
 
 /** "Раз в месяц", "Каждые … дней" - for the option in the list */
