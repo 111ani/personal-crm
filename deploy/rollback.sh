@@ -7,6 +7,8 @@ set -euo pipefail
 # shellcheck source=common.sh
 source "$(dirname "$0")/common.sh"
 
+lock_production
+check_restore_complete
 check_env_file
 CURRENT=$(release_value APP_TAG)
 PREVIOUS=$(release_value PREVIOUS_TAG)
