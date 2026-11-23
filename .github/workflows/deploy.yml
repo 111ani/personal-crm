@@ -1,5 +1,5 @@
 # Push to main -> image tagged with the commit SHA -> GHCR -> on the server:
-# migrations -> new image -> smoke /health. The deploy steps live in deploy/.
+# backup -> migrations -> new image -> smoke /health. The steps live in deploy/.
 name: Deploy
 
 on:
