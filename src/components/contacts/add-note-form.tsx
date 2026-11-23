@@ -51,9 +51,7 @@ export function AddNoteForm({ contactId }: { contactId: string }) {
         <Button type="submit" disabled={isPending}>
           {isPending ? "Сохраняем…" : "Добавить заметку"}
         </Button>
-        <span className="text-xs text-muted-foreground">
-          или Ctrl + Enter
-        </span>
+        <span className="text-xs text-muted-foreground">или Ctrl + Enter</span>
       </div>
     </form>
   );

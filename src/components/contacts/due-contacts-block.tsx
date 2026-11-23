@@ -2,11 +2,7 @@
 
 import { useId, useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  CircleCheckIcon,
-} from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon, CircleCheckIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { checkIn, undoCheckIn } from "@/app/actions";

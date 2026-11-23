@@ -19,7 +19,10 @@ describe("адрес главной: разбор", () => {
 
   test("группы из адреса нет в списке — группа не выбрана", () => {
     expect(
-      parseHomeParams({ group: "0c9a5d7e-6c31-4b8e-8f0a-5e9d1b7c2a99" }, knownIds),
+      parseHomeParams(
+        { group: "0c9a5d7e-6c31-4b8e-8f0a-5e9d1b7c2a99" },
+        knownIds,
+      ),
     ).toEqual({ query: "", groupId: null });
   });
 

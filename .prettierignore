@@ -1,0 +1,15 @@
+# Prettier also skips everything in .gitignore
+
+# Generated: drizzle-kit migrations and snapshots, pnpm lockfile
+drizzle/
+pnpm-lock.yaml
+
+# Human-written texts and design references: left as written
+*.md
+specs/
+openspec/
+design/
+.claude/
+
+# Deploy config: checked by a real deploy, kept as written
+deploy/

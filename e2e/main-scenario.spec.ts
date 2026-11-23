@@ -28,10 +28,16 @@ async function expectSavedCard(page: Page) {
   ).toBeVisible();
   await expect(page.getByText(newContact.about)).toBeVisible();
   await expect(page.getByText(newContact.howWeMet)).toBeVisible();
-  await expect(page.getByRole("link", { name: newContact.phone })).toBeVisible();
-  await expect(page.getByRole("link", { name: newContact.email })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: newContact.phone }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: newContact.email }),
+  ).toBeVisible();
   await expect(page.getByText("о чём договорились — 1 запись")).toBeVisible();
-  await expect(page.getByRole("listitem").filter({ hasText: note })).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: note }),
+  ).toBeVisible();
 }
 
 test.beforeEach(async () => {
@@ -70,7 +76,9 @@ test("Главный сценарий: список → новый контак�
     ).toBeVisible();
     const list = contactList(page);
     await expect(list.getByText("Всего 4 контакта")).toBeVisible();
-    await expect(list.getByRole("link", { name: newContact.name })).toBeVisible();
+    await expect(
+      list.getByRole("link", { name: newContact.name }),
+    ).toBeVisible();
   });
 
   await test.step("Нашёл контакт по имени — открыл карточку, дописал заметку", async () => {

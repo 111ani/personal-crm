@@ -88,9 +88,10 @@ const contactsWithDue = new QueryBuilder()
       .mapWith(contactCheckIns.createdAt)
       .as("last_check_in_at"),
     // A whole day: by the database clock (UTC), like startOfToday
-    dueAt: sql<Date>`date_trunc('day', coalesce(greatest(${lastNoteAt}, ${lastCheckInAt}), ${contacts.contactFrequencySetAt}) + ${frequencyInterval})`
-      .mapWith(contacts.contactFrequencySetAt)
-      .as("due_at"),
+    dueAt:
+      sql<Date>`date_trunc('day', coalesce(greatest(${lastNoteAt}, ${lastCheckInAt}), ${contacts.contactFrequencySetAt}) + ${frequencyInterval})`
+        .mapWith(contacts.contactFrequencySetAt)
+        .as("due_at"),
   })
   .from(contacts)
   .where(isNotNull(contacts.contactFrequency))

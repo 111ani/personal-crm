@@ -34,7 +34,11 @@ export async function prepareTestDatabase(url: string) {
     await createDatabaseIfMissing(name);
   } catch (error) {
     const code = (error as { code?: string }).code;
-    if (code === "ECONNREFUSED" || code === "ETIMEDOUT" || code === "ENOTFOUND") {
+    if (
+      code === "ECONNREFUSED" ||
+      code === "ETIMEDOUT" ||
+      code === "ENOTFOUND"
+    ) {
       throw new Error(DATABASE_DOWN, { cause: error });
     }
     throw error;
