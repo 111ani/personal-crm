@@ -7,7 +7,7 @@ const TEST_SUFFIXES = ["_test", "_e2e"] as const;
 export type TestSuffix = (typeof TEST_SUFFIXES)[number];
 
 function readDatabaseUrl(): URL {
-  if (existsSync(".env")) {
+  if (!process.env.DATABASE_URL && existsSync(".env")) {
     process.loadEnvFile(".env");
   }
   const value = process.env.DATABASE_URL;

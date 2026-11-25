@@ -16,14 +16,16 @@ const rowGrid =
   "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 lg:grid-cols-[auto_minmax(0,1fr)_11rem_15rem] lg:gap-x-6";
 
 export async function ContactList({
+  ownerId,
   searchParams,
 }: {
+  ownerId: string;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // The address first: until it is known the page is built without a
   // request, and the database must not be asked (the build has none)
   const params = await searchParams;
-  const allGroups = await listGroups();
+  const allGroups = await listGroups(ownerId);
   const { query, groupId } = parseHomeParams(
     params,
     allGroups.map((group) => group.id),
@@ -33,8 +35,8 @@ export async function ContactList({
 
   // With a group, everything is about the people of that group
   const [items, total] = await Promise.all([
-    listContacts(query, groupId ?? undefined),
-    countContacts(groupId ?? undefined),
+    listContacts(ownerId, query, groupId ?? undefined),
+    countContacts(ownerId, groupId ?? undefined),
   ]);
 
   if (total === 0) {
@@ -51,8 +53,8 @@ export async function ContactList({
     return (
       <EmptyState
         icon={<UsersIcon />}
-        title="Пока нет ни одного контакта"
-        text="Нажмите «Добавить контакт», чтобы записать первого человека."
+        title="Добавь первый контакт"
+        text="Нажми «Добавить контакт», чтобы записать первого человека."
       />
     );
   }

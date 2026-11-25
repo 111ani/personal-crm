@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
 import { ArrowLeftIcon, UsersIcon } from "lucide-react";
 
 import { GroupRow } from "@/components/groups/group-row";
 import { NewGroupForm } from "@/components/groups/new-group-form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireUser } from "@/lib/auth/session";
 import { listGroups } from "@/lib/groups/queries";
 
 export const metadata: Metadata = {
@@ -14,6 +14,15 @@ export const metadata: Metadata = {
 };
 
 export default function GroupsPage() {
+  return (
+    <Suspense>
+      <GroupsPageContent />
+    </Suspense>
+  );
+}
+
+async function GroupsPageContent() {
+  const { id: ownerId } = await requireUser();
   return (
     <div className="grid gap-6 md:gap-8">
       <Link
@@ -29,17 +38,14 @@ export default function GroupsPage() {
       <NewGroupForm />
 
       <Suspense fallback={<GroupListSkeleton />}>
-        <GroupList />
+        <GroupList ownerId={ownerId} />
       </Suspense>
     </div>
   );
 }
 
-async function GroupList() {
-  // Read the groups on every request, not once at build time: the build
-  // (in CI) has no database, and the list changes all the time
-  await connection();
-  const groups = await listGroups();
+async function GroupList({ ownerId }: { ownerId: string }) {
+  const groups = await listGroups(ownerId);
 
   if (groups.length === 0) {
     return (

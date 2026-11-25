@@ -1,10 +1,9 @@
 // Shared by Vitest (test/global-setup.ts, test/setup.ts) and Playwright
 // (e2e/global-setup.ts, e2e/database.ts): each has its own test database.
 
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 
+import { migrateDatabase } from "../scripts/migrate-db";
 import { getMainDatabaseUrl, type TestSuffix } from "./database-url";
 
 const DATABASE_DOWN = "Запустите базу: pnpm db:up";
@@ -46,7 +45,9 @@ export async function prepareTestDatabase(url: string) {
 
   const pool = new Pool({ connectionString: url });
   try {
-    await migrate(drizzle(pool), { migrationsFolder: "drizzle" });
+    // Existing local test databases can contain rows from before sign-in.
+    // Assign those fixtures to a synthetic account during the upgrade.
+    await migrateDatabase(pool, "migration-fixtures@example.test");
   } finally {
     await pool.end();
   }

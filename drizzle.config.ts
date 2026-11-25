@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 
 import { defineConfig } from "drizzle-kit";
 
-if (existsSync(".env")) {
+if (!process.env.DATABASE_URL && existsSync(".env")) {
   process.loadEnvFile(".env");
 }
 

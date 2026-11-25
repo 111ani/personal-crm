@@ -664,10 +664,10 @@ export function generateSeedData(count: number, now: Date, seed = 20261008) {
   // keep-in-touch data and groups were added
   const keepInTouchRandom = createRandom(seed + 1);
   const groupRandom = createRandom(seed + 2);
-  const contactRows: NewContact[] = [];
+  const contactRows: Omit<NewContact, "ownerId">[] = [];
   const noteRows: NewNote[] = [];
   const checkInRows: NewContactCheckIn[] = [];
-  const groupRows: NewGroup[] = groupNames.map((name) => ({
+  const groupRows: Omit<NewGroup, "ownerId">[] = groupNames.map((name) => ({
     id: randomUUID(),
     name,
   }));

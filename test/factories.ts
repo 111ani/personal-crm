@@ -4,6 +4,7 @@ import { sql, type SQL } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import {
+  authUsers,
   contactCheckIns,
   contactGroups,
   contacts,
@@ -14,6 +15,22 @@ import type { ContactFrequency } from "@/lib/contacts/frequency";
 
 // A moment for a row: an exact date or an expression on the database clock
 type Moment = Date | SQL;
+
+export const TEST_OWNER_ID = "test-owner";
+
+export async function ensureTestOwner() {
+  const user = {
+    id: TEST_OWNER_ID,
+    name: "Test owner",
+    email: "test-owner@example.test",
+    emailVerified: true,
+  };
+  await getDb()
+    .insert(authUsers)
+    .values(user)
+    .onConflictDoNothing({ target: authUsers.id });
+  return { ...user, createdAt: new Date(), updatedAt: new Date() };
+}
 
 /** A moment in the past by the database clock: `ago("15 days")` */
 export function ago(interval: string): SQL {
@@ -46,10 +63,12 @@ export async function insertContactWithFrequency(
     setAt = sql`now()`,
   }: { frequency: ContactFrequency; days?: number | null; setAt?: Moment },
 ): Promise<string> {
+  await ensureTestOwner();
   const [row] = await getDb()
     .insert(contacts)
     .values({
       name,
+      ownerId: TEST_OWNER_ID,
       contactFrequency: frequency,
       contactFrequencyDays: days,
       contactFrequencySetAt: setAt,
@@ -88,17 +107,19 @@ export async function insertDueContact(name: string, lastNoteAgo = "15 days") {
 }
 
 export async function insertContact(name: string): Promise<string> {
+  await ensureTestOwner();
   const [row] = await getDb()
     .insert(contacts)
-    .values({ name })
+    .values({ name, ownerId: TEST_OWNER_ID })
     .returning({ id: contacts.id });
   return row.id;
 }
 
 export async function insertGroup(name: string): Promise<string> {
+  await ensureTestOwner();
   const [row] = await getDb()
     .insert(groups)
-    .values({ name })
+    .values({ name, ownerId: TEST_OWNER_ID })
     .returning({ id: groups.id });
   return row.id;
 }

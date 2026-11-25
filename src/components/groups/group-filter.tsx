@@ -12,14 +12,16 @@ import { cn } from "@/lib/utils";
  * button is a link to the home address with that group and the typed search
  */
 export async function GroupFilter({
+  ownerId,
   searchParams,
 }: {
+  ownerId: string;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // The address first: until it is known the page is built without a
   // request, and the database must not be asked (the build has none)
   const params = await searchParams;
-  const groups = await listGroups();
+  const groups = await listGroups(ownerId);
   if (groups.length === 0) {
     return null;
   }

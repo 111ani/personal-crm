@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   integer,
@@ -17,10 +18,114 @@ import {
   minFrequencyDays,
 } from "../lib/contacts/frequency.ts";
 
+export const authUsers = pgTable("auth_user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  image: text("image"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const authSessions = pgTable(
+  "auth_session",
+  {
+    id: text("id").primaryKey(),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("auth_session_user_idx").on(table.userId)],
+);
+
+export const authAccounts = pgTable(
+  "auth_account",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+    }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+      withTimezone: true,
+    }),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("auth_account_user_idx").on(table.userId)],
+);
+
+export const authVerifications = pgTable(
+  "auth_verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("auth_verification_identifier_idx").on(table.identifier)],
+);
+
+export const magicLinkRequests = pgTable(
+  "magic_link_requests",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    email: text("email").notNull(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull(),
+    current: boolean("current").notNull().default(true),
+  },
+  (table) => [
+    index("magic_link_requests_email_issued_idx").on(
+      table.email,
+      table.issuedAt,
+    ),
+    uniqueIndex("magic_link_requests_current_email_idx")
+      .on(table.email)
+      .where(sql`${table.current}`),
+  ],
+);
+
 export const contacts = pgTable(
   "contacts",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => authUsers.id),
     name: text("name").notNull(),
     // Who this person is: role, occupation, relation
     about: text("about"),
@@ -44,7 +149,7 @@ export const contacts = pgTable(
       .defaultNow(),
   },
   (table) => [
-    index("contacts_name_idx").on(table.name),
+    index("contacts_owner_name_idx").on(table.ownerId, table.name),
     check(
       "contacts_contact_frequency_check",
       sql`${table.contactFrequency} in (${sql.raw(
@@ -102,19 +207,24 @@ export const contactCheckIns = pgTable(
   ],
 );
 
-// Groups of contacts ("Семья", "Теннис"): circles of people. Names are unique
-// regardless of letter case: the database itself refuses "Теннис" next to "теннис"
+// Group names are case-insensitively unique for each owner.
 export const groups = pgTable(
   "groups",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => authUsers.id),
     name: text("name").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("groups_name_lower_idx").on(sql`lower(${table.name})`),
+    uniqueIndex("groups_owner_name_lower_idx").on(
+      table.ownerId,
+      sql`lower(${table.name})`,
+    ),
   ],
 );
 

@@ -19,6 +19,7 @@ import {
   insertGroup,
   insertGroupWithContacts,
 } from "../../test/factories";
+import { TEST_OWNER_ID } from "../../test/factories";
 
 const idle = { status: "idle" } as const;
 
@@ -49,7 +50,7 @@ function contactForm(
 
 // The ticked labels of the card, by group id
 async function tickedGroupIds(contactId: string) {
-  const data = await getContactWithNotes(contactId);
+  const data = await getContactWithNotes(TEST_OWNER_ID, contactId);
   return [...(data?.groupIds ?? [])].sort();
 }
 
@@ -92,7 +93,7 @@ describe("Поле «Группы» в карточке контакта", () =>
     expect(await tickedGroupIds(contactId)).toEqual([friendsId]);
     // The group itself stays, now without Anna
     expect(
-      (await listGroups()).map(
+      (await listGroups(TEST_OWNER_ID)).map(
         (group) => `${group.name} — ${formatGroupSize(group.contactCount)}`,
       ),
     ).toEqual(["Друзья — 1 контакт", "Теннис — пока никого"]);
@@ -157,11 +158,12 @@ describe("Поле «Группы» в карточке контакта", () =>
     expect(after.setAt).toEqual(before.setAt);
   });
 
-  test("Группа, удалённая, пока форма была открыта, при сохранении пропускается, остальное сохраняется", async () => {
+  test("A deleted group in an open form prevents partial contact changes", async () => {
     const contactId = await insertContact("Анна");
     const friendsId = await insertGroup("Друзья");
     const goneId = await insertGroup("Соседи");
     await deleteGroup(goneId);
+    await addToGroup(contactId, friendsId);
 
     const result = await updateContact(
       contactId,
@@ -172,8 +174,11 @@ describe("Поле «Группы» в карточке контакта", () =>
       }),
     );
 
-    expect(result).toMatchObject({ status: "success", name: "Анна Смирнова" });
+    expect(result).toMatchObject({ status: "error" });
     expect(await tickedGroupIds(contactId)).toEqual([friendsId]);
+    expect(
+      (await getContactWithNotes(TEST_OWNER_ID, contactId))?.contact.name,
+    ).toBe("Анна");
   });
 
   test("Повторы и не-id в списке групп отклоняются, ничего не меняется", async () => {
@@ -195,7 +200,7 @@ describe("Поле «Группы» в карточке контакта", () =>
     expect(twice.status).toBe("error");
     expect(notAnId.status).toBe("error");
     expect(await tickedGroupIds(contactId)).toEqual([friendsId]);
-    const data = await getContactWithNotes(contactId);
+    const data = await getContactWithNotes(TEST_OWNER_ID, contactId);
     expect(data?.contact.name).toBe("Анна");
   });
 });
@@ -266,7 +271,7 @@ describe("Новая группа прямо из поля «Группы»", ()
 
     expect(await tickedGroupIds(contactId)).toEqual([created.group.id]);
     expect(
-      (await listGroups()).map(
+      (await listGroups(TEST_OWNER_ID)).map(
         (group) => `${group.name} — ${formatGroupSize(group.contactCount)}`,
       ),
     ).toEqual(["Аналитики — 1 контакт"]);
@@ -279,7 +284,7 @@ describe("Новая группа прямо из поля «Группы»", ()
 
     // No second group; the field ticks the existing one
     expect(result).toMatchObject({ status: "exists", group: { id: tennisId } });
-    expect(await listGroups()).toHaveLength(1);
+    expect(await listGroups(TEST_OWNER_ID)).toHaveLength(1);
   });
 
   test("Группа остаётся, даже если контакт не сохранили", async () => {
@@ -288,7 +293,7 @@ describe("Новая группа прямо из поля «Группы»", ()
 
     expect(await getDb().select().from(contacts)).toHaveLength(0);
     expect(
-      (await listGroups()).map(
+      (await listGroups(TEST_OWNER_ID)).map(
         (group) => `${group.name} — ${formatGroupSize(group.contactCount)}`,
       ),
     ).toEqual(["Соседи — пока никого"]);
@@ -298,7 +303,7 @@ describe("Новая группа прямо из поля «Группы»", ()
     const contactId = await insertContact("Анна");
 
     // No groups: the field says "Групп пока нет" and offers "+ Новая группа"
-    expect(await listGroups()).toEqual([]);
+    expect(await listGroups(TEST_OWNER_ID)).toEqual([]);
     expect(await tickedGroupIds(contactId)).toEqual([]);
   });
 });
@@ -317,11 +322,11 @@ describe("Удалённый контакт пропадает из групп",
     });
 
     expect(
-      (await listGroups()).map(
+      (await listGroups(TEST_OWNER_ID)).map(
         (group) => `${group.name} — ${formatGroupSize(group.contactCount)}`,
       ),
     ).toEqual(["Теннис — 2 контакта"]);
     expect(await getDb().select().from(contacts)).toHaveLength(2);
-    expect((await listGroups())[0].id).toBe(groupId);
+    expect((await listGroups(TEST_OWNER_ID))[0].id).toBe(groupId);
   });
 });

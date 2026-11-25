@@ -18,19 +18,20 @@ import {
   insertGroup,
   insertGroupWithContacts,
 } from "../../test/factories";
+import { TEST_OWNER_ID } from "../../test/factories";
 
 // What the home page does for an address: reads it, asks the database for the
 // list and the counter, and says what is above the list
 async function openHome(params: Record<string, string>) {
-  const allGroups = await listGroups();
+  const allGroups = await listGroups(TEST_OWNER_ID);
   const { query, groupId } = parseHomeParams(
     params,
     allGroups.map((group) => group.id),
   );
   const group = allGroups.find((item) => item.id === groupId);
   const [items, total] = await Promise.all([
-    listContacts(query, groupId ?? undefined),
-    countContacts(groupId ?? undefined),
+    listContacts(TEST_OWNER_ID, query, groupId ?? undefined),
+    countContacts(TEST_OWNER_ID, groupId ?? undefined),
   ]);
   return {
     // The row of buttons: "Все", then the groups; null while there are none
@@ -189,15 +190,16 @@ describe("Блок «Пора связаться» не зависит от гр
       .insert(contacts)
       .values({
         name: "Борис",
+        ownerId: TEST_OWNER_ID,
         contactFrequency: "week",
         contactFrequencySetAt: new Date("2020-01-01T00:00:00Z"),
       })
       .returning({ id: contacts.id });
 
-    const before = await listDueContacts();
+    const before = await listDueContacts(TEST_OWNER_ID);
     // Selecting the group changes the list only: the block does not read it
     await openHome({ group: groupId });
-    const after = await listDueContacts();
+    const after = await listDueContacts(TEST_OWNER_ID);
 
     expect(before.map((contact) => contact.id)).toEqual([stranger.id]);
     expect(after).toEqual(before);
@@ -210,13 +212,13 @@ describe("Существующие контакты — без групп", () =
     await insertContact("Борис");
 
     const home = await openHome({});
-    const card = await getContactWithNotes(contactId);
+    const card = await getContactWithNotes(TEST_OWNER_ID, contactId);
 
     // No row, the same people; "Групп пока нет" in the card's field
     expect(home.buttons).toBeNull();
     expect(home.names).toEqual(["Анна", "Борис"]);
     expect(card?.groupIds).toEqual([]);
-    expect(await listGroups()).toEqual([]);
+    expect(await listGroups(TEST_OWNER_ID)).toEqual([]);
   });
 
   test("Человек в нескольких группах не повторяется в списке", async () => {
@@ -228,6 +230,6 @@ describe("Существующие контакты — без групп", () =
 
     expect((await openHome({})).names).toEqual(["Анна"]);
     expect((await openHome({ group: familyId })).names).toEqual(["Анна"]);
-    expect(await countContacts(tennisId)).toBe(1);
+    expect(await countContacts(TEST_OWNER_ID, tennisId)).toBe(1);
   });
 });

@@ -7,6 +7,7 @@ import {
   desc,
   eq,
   exists,
+  getTableColumns,
   ilike,
   isNotNull,
   sql,
@@ -15,7 +16,13 @@ import {
 import { QueryBuilder } from "drizzle-orm/pg-core";
 
 import { getDb } from "@/db";
-import { contactCheckIns, contactGroups, contacts, notes } from "@/db/schema";
+import {
+  contactCheckIns,
+  contactGroups,
+  contacts,
+  groups,
+  notes,
+} from "@/db/schema";
 import type { ContactFrequency } from "@/lib/contacts/frequency";
 
 export type ContactListItem = Pick<
@@ -76,6 +83,7 @@ const lastCheckInAt = sql`(select max(${contactCheckIns.createdAt}) from ${conta
 const contactsWithDue = new QueryBuilder()
   .select({
     id: contacts.id,
+    ownerId: contacts.ownerId,
     name: contacts.name,
     // Never NULL here: contacts without a frequency are filtered out below
     frequency: sql<ContactFrequency>`${contacts.contactFrequency}`.as(
@@ -114,6 +122,13 @@ function inGroup(groupId: string) {
     getDb()
       .select({ one: sql`1` })
       .from(contactGroups)
+      .innerJoin(
+        groups,
+        and(
+          eq(groups.id, contactGroups.groupId),
+          eq(groups.ownerId, contacts.ownerId),
+        ),
+      )
       .where(
         and(
           eq(contactGroups.contactId, contacts.id),
@@ -129,6 +144,7 @@ function inGroup(groupId: string) {
  * people of that group.
  */
 export async function listContacts(
+  ownerId: string,
   query: string,
   groupId?: string,
 ): Promise<ContactListItem[]> {
@@ -149,21 +165,29 @@ export async function listContacts(
       email: contacts.email,
     })
     .from(contacts)
-    .where(filters.length > 0 ? and(...filters) : undefined)
+    .where(and(eq(contacts.ownerId, ownerId), ...filters))
     .orderBy(asc(contacts.name), asc(contacts.id));
 }
 
 /** How many contacts there are; with a group - how many people in it */
-export async function countContacts(groupId?: string): Promise<number> {
+export async function countContacts(
+  ownerId: string,
+  groupId?: string,
+): Promise<number> {
   const [row] = await getDb()
     .select({ value: count() })
     .from(contacts)
-    .where(groupId ? inGroup(groupId) : undefined);
+    .where(
+      and(
+        eq(contacts.ownerId, ownerId),
+        groupId ? inGroup(groupId) : undefined,
+      ),
+    );
   return row?.value ?? 0;
 }
 
 /** Contacts whose due moment has come: the longest overdue first */
-export async function listDueContacts(): Promise<DueContact[]> {
+export async function listDueContacts(ownerId: string): Promise<DueContact[]> {
   return getDb()
     .select({
       id: contactsWithDue.id,
@@ -173,7 +197,7 @@ export async function listDueContacts(): Promise<DueContact[]> {
       overdueDays,
     })
     .from(contactsWithDue)
-    .where(isDue)
+    .where(and(eq(contactsWithDue.ownerId, ownerId), isDue))
     .orderBy(
       asc(contactsWithDue.dueAt),
       asc(contactsWithDue.name),
@@ -181,11 +205,12 @@ export async function listDueContacts(): Promise<DueContact[]> {
     );
 }
 
-export async function getContactWithNotes(id: string) {
+export async function getContactWithNotes(ownerId: string, id: string) {
+  const ownedContact = and(eq(contacts.id, id), eq(contacts.ownerId, ownerId));
   const [contact] = await getDb()
     .select()
     .from(contacts)
-    .where(eq(contacts.id, id))
+    .where(ownedContact)
     .limit(1);
 
   if (!contact) {
@@ -194,9 +219,10 @@ export async function getContactWithNotes(id: string) {
 
   const [contactNotes, dueRows, groupRows] = await Promise.all([
     getDb()
-      .select()
+      .select(getTableColumns(notes))
       .from(notes)
-      .where(eq(notes.contactId, id))
+      .innerJoin(contacts, eq(contacts.id, notes.contactId))
+      .where(ownedContact)
       .orderBy(desc(notes.createdAt), desc(notes.id)),
     // No row if the contact has no frequency
     getDb()
@@ -209,12 +235,19 @@ export async function getContactWithNotes(id: string) {
         now: sql<Date>`now()`.mapWith(contacts.createdAt),
       })
       .from(contactsWithDue)
-      .where(eq(contactsWithDue.id, id)),
+      .where(
+        and(eq(contactsWithDue.id, id), eq(contactsWithDue.ownerId, ownerId)),
+      ),
     // The groups this person is in: the ticked labels of the "Группы" field
     getDb()
       .select({ groupId: contactGroups.groupId })
       .from(contactGroups)
-      .where(eq(contactGroups.contactId, id)),
+      .innerJoin(contacts, eq(contactGroups.contactId, contacts.id))
+      .innerJoin(
+        groups,
+        and(eq(contactGroups.groupId, groups.id), eq(groups.ownerId, ownerId)),
+      )
+      .where(ownedContact),
   ]);
   const due: ContactDue | null = dueRows[0] ?? null;
 

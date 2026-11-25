@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход по почте — обзор Личной CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    /* App tokens from src/app/globals.css. Spacing uses Tailwind's unit. */
+    :root {
+      --background: #f6f2ec;
+      --foreground: #1f1915;
+      --soft-foreground: #3d342e;
+      --muted-foreground: #75665b;
+      --brand: #9a5a3c;
+      --card: #fdfaf6;
+      --primary: #b47d60;
+      --primary-foreground: #fff;
+      --secondary: #ede5da;
+      --secondary-foreground: #5e3420;
+      --highlight: #fbeee4;
+      --destructive: #b3412f;
+      --border: #e7dccf;
+      --input: #d9cabb;
+      --ring: #9a5a3c;
+      --radius: 1rem;
+      --radius-card: 16px;
+      --text-eyebrow: 11px;
+      --text-eyebrow--letter-spacing: 0.32em;
+      --text-title: 34px;
+      --text-title--line-height: 1.08;
+      --text-title--letter-spacing: -0.025em;
+      --text-lead: 15px;
+      --text-lead--line-height: 1.5;
+      --text-card-title: 21px;
+      --text-card-title--line-height: 1.15;
+      --text-card-title--letter-spacing: -0.02em;
+      --text-name: 18px;
+      --text-name--line-height: 1.25;
+      --text-button: 16px;
+      --font-manrope: "Manrope";
+      --font-playfair: "Playfair Display";
+      --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+      --font-heading: var(--font-playfair), ui-serif, Georgia, serif;
+      --font-mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+      --spacing: .25rem;
+      color-scheme: light;
+    }
+
+    @media (min-width: 48rem) {
+      :root {
+        --radius-card: 20px;
+        --text-eyebrow: 12px;
+        --text-title: 48px;
+        --text-title--line-height: 1.04;
+        --text-title--letter-spacing: -0.03em;
+        --text-lead: 18px;
+        --text-lead--line-height: 1.55;
+        --text-card-title: 24px;
+        --text-name: 19px;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--background); color: var(--foreground); font: var(--text-button)/1.55 var(--font-sans); }
+    .page { width: min(100%, 62rem); margin: auto; padding: calc(var(--spacing) * 9) calc(var(--spacing) * 4) calc(var(--spacing) * 18); }
+    header { padding-bottom: calc(var(--spacing) * 6); border-bottom: 1px solid var(--border); }
+    h1, h2, h3 { font-family: var(--font-heading); font-weight: 500; text-wrap: balance; }
+    h1 { margin: calc(var(--spacing) * 3) 0; font-size: var(--text-title); line-height: var(--text-title--line-height); letter-spacing: var(--text-title--letter-spacing); }
+    h2 { margin: 0 0 calc(var(--spacing) * 4); font-size: calc(var(--text-card-title) * 1.24); line-height: var(--text-card-title--line-height); letter-spacing: var(--text-card-title--letter-spacing); }
+    h3 { margin: 0 0 calc(var(--spacing) * 2); font-size: var(--text-name); line-height: var(--text-name--line-height); }
+    p { margin: 0; text-wrap: pretty; }
+    p + p { margin-top: calc(var(--spacing) * 2); }
+    a { color: var(--brand); text-underline-offset: var(--spacing); }
+    :focus-visible { outline: 2px solid var(--ring); outline-offset: var(--spacing); }
+    code { font-family: var(--font-mono); font-size: .86em; overflow-wrap: anywhere; }
+    nav { display: flex; flex-wrap: wrap; gap: var(--spacing) calc(var(--spacing) * 4); margin-top: calc(var(--spacing) * 5); font-weight: 700; }
+    main > section { margin-top: calc(var(--spacing) * 12); scroll-margin-top: calc(var(--spacing) * 5); }
+    .brand { color: var(--brand); font-size: var(--text-eyebrow); letter-spacing: var(--text-eyebrow--letter-spacing); font-weight: 700; text-transform: uppercase; }
+    .lead { font-size: var(--text-lead); line-height: var(--text-lead--line-height); max-width: 60ch; }
+    .note { color: var(--muted-foreground); font-size: .875em; }
+    .status { margin-top: calc(var(--spacing) * 3); color: var(--soft-foreground); }
+    .stack { display: grid; gap: calc(var(--spacing) * 3); }
+    .pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--spacing) * 4); }
+    .panel, .mock, .rule { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-card); padding: calc(var(--spacing) * 4); min-width: 0; }
+    .rule { border-inline-start: 2px solid var(--input); }
+    .rule strong { display: block; margin-bottom: var(--spacing); }
+    .screens { margin-top: calc(var(--spacing) * 4); }
+    .mock { margin: 0; }
+    .mock figcaption { color: var(--soft-foreground); font-size: .875em; font-weight: 700; margin-bottom: calc(var(--spacing) * 3); }
+    .screen { background: var(--background); border-radius: calc(var(--radius) * .75); padding: calc(var(--spacing) * 3); }
+    .screen > * + * { margin-top: calc(var(--spacing) * 2); }
+    .new { background: var(--highlight); border: 1px dashed var(--brand); border-radius: calc(var(--radius) * .75); padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3); }
+    .sample-input { background: var(--card); border: 1px solid var(--input); padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3); border-radius: calc(var(--radius) * .6); color: var(--muted-foreground); overflow-wrap: anywhere; }
+    .sample-button { display: inline-block; background: var(--primary); color: var(--primary-foreground); border-radius: 999px; padding: var(--spacing) calc(var(--spacing) * 3); font-size: .875em; font-weight: 700; }
+    .sample-button.secondary { background: var(--secondary); color: var(--secondary-foreground); }
+    .error { color: var(--destructive); font-weight: 700; }
+    .appbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--spacing); font-size: .875em; overflow-wrap: anywhere; }
+    .appbar > span { min-width: 0; }
+    .due-contact { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: calc(var(--spacing) * 2); margin-top: var(--spacing); }
+    .list-row { display: flex; justify-content: space-between; gap: calc(var(--spacing) * 2); border-top: 1px solid var(--border); padding-top: calc(var(--spacing) * 2); }
+    .legend { display: flex; flex-wrap: wrap; gap: calc(var(--spacing) * 2); margin: calc(var(--spacing) * 3) 0; font-size: .875em; }
+    .legend > span { padding: var(--spacing) calc(var(--spacing) * 2); }
+    .legend-old, .node { border: 1px solid var(--border); border-radius: calc(var(--radius) * .75); background: var(--card); }
+    .diagram { display: grid; gap: calc(var(--spacing) * 2); margin-top: calc(var(--spacing) * 3); }
+    .node { padding: calc(var(--spacing) * 2); min-width: 0; overflow-wrap: anywhere; }
+    .node.new { background: var(--highlight); border: 1px dashed var(--brand); }
+    .node p, .node span { display: block; font-size: .875em; }
+    .node .addition { margin-top: var(--spacing); border-inline-start: 2px dashed var(--brand); padding-inline-start: calc(var(--spacing) * 2); color: var(--secondary-foreground); }
+    .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--spacing) * 2); }
+    .relation { text-align: center; color: var(--muted-foreground); font-size: .875em; }
+    .example { margin-top: calc(var(--spacing) * 4); background: var(--secondary); color: var(--secondary-foreground); }
+    .example .pair { margin-top: calc(var(--spacing) * 3); }
+    .steps { margin: calc(var(--spacing) * 3) 0 0; padding: 0; list-style-position: inside; }
+    .steps li + li { margin-top: calc(var(--spacing) * 2); }
+    .steps li::marker { color: var(--brand); font-weight: 700; }
+    .steps p { margin-top: var(--spacing); }
+    .data-heading { margin: calc(var(--spacing) * 6) 0 calc(var(--spacing) * 2); }
+    details { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-card); }
+    summary { padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4); cursor: pointer; font-weight: 700; }
+    .checks { list-style: none; margin: 0; padding: 0; }
+    .checks li { border-top: 1px solid var(--border); }
+    .checks label { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: calc(var(--spacing) * 3); padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4); cursor: pointer; }
+    .checks input { margin: var(--spacing) 0 0; accent-color: var(--brand); width: var(--text-button); height: var(--text-button); }
+    .checks strong, .checks span span { display: block; }
+    .checks span span { margin-top: var(--spacing); color: var(--soft-foreground); }
+    .checks em { color: var(--secondary-foreground); font-style: normal; font-weight: 700; }
+    .check-intro { margin-bottom: calc(var(--spacing) * 3); }
+    .check-count { margin-top: calc(var(--spacing) * 2); color: var(--secondary-foreground); font-weight: 700; }
+    .points { margin: calc(var(--spacing) * 2) 0 0; padding-inline-start: calc(var(--spacing) * 5); }
+    .points li + li { margin-top: calc(var(--spacing) * 2); }
+    footer { margin-top: calc(var(--spacing) * 12); padding-top: calc(var(--spacing) * 4); border-top: 1px solid var(--border); }
+    @media (min-width: 48rem) {
+      .page { padding: calc(var(--spacing) * 15) calc(var(--spacing) * 8) calc(var(--spacing) * 20); }
+      .pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .panel, .mock, .rule { padding: calc(var(--spacing) * 5); }
+      main > section { margin-top: calc(var(--spacing) * 15); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <p class="brand">Личная CRM</p>
+      <h1>Вход по почте</h1>
+      <p class="lead">Каждый входит по ссылке из письма и ведёт свою адресную книгу. Существующие контакты и группы переходят в аккаунт владельца CRM.</p>
+      <nav aria-label="Разделы обзора">
+        <a href="#screens">Экраны</a>
+        <a href="#rules">Правила</a>
+        <a href="#data">Модель данных</a>
+        <a href="#checks">Ручная проверка</a>
+        <a href="#decisions">Решения</a>
+      </nav>
+    </header>
+    <main>
+      <section aria-labelledby="summary-title">
+        <h2 id="summary-title">Коротко</h2>
+        <div class="panel">
+          <p>Открой CRM, укажи почту и нажми «Войти» в полученном письме. У нового пользователя открывается пустой список. Когда ты войдёшь с почтой владельца, увидишь свои существующие контакты, группы и напоминания.</p>
+          <p class="status"><strong>Спроектировано · 0 из 19 задач выполнено.</strong> Автотесты входа и доступа к своим данным запланированы. Существующий тест главного сценария останется отдельным.</p>
+        </div>
+      </section>
+
+      <section id="screens" aria-labelledby="screens-title">
+        <h2 id="screens-title">Что появится на экранах</h2>
+        <p class="note">Это наброски. Пунктиром выделены новые элементы и поведение.</p>
+        <div class="pair screens">
+          <figure class="mock">
+            <figcaption>Открытие CRM без входа</figcaption>
+            <div class="screen new">
+              <h3>Вход в Личную CRM</h3>
+              <p>Почта</p>
+              <div class="sample-input">anna@example.com</div>
+              <span class="sample-button">Получить ссылку</span>
+            </div>
+          </figure>
+          <figure class="mock">
+            <figcaption>Ответ после запроса письма</figcaption>
+            <div class="screen">
+              <p class="new">Ссылка для входа отправлена на anna@example.com</p>
+              <p class="new error">Проверь адрес почты</p>
+              <p class="new error">Слишком часто, попробуй через несколько минут</p>
+            </div>
+            <p class="note">Показаны три отдельных состояния. Ошибка адреса стоит под полем почты.</p>
+          </figure>
+          <figure class="mock">
+            <figcaption>Письмо в почтовом ящике</figcaption>
+            <div class="screen new">
+              <p class="note">Отправитель — Личная CRM</p>
+              <h3>Вход в Личную CRM</h3>
+              <span class="sample-button">Войти</span>
+              <p>Ссылка работает 15 минут.</p>
+              <p class="note">Если вы не запрашивали вход - просто проигнорируйте письмо</p>
+            </div>
+          </figure>
+          <figure class="mock">
+            <figcaption>Старая ссылка</figcaption>
+            <div class="screen new">
+              <h3>Ссылка устарела, запроси новую</h3>
+              <span class="sample-button secondary">На страницу входа</span>
+            </div>
+          </figure>
+          <figure class="mock">
+            <figcaption>Главная после входа</figcaption>
+            <div class="screen">
+              <div class="appbar new"><span>anna@example.com</span><span class="sample-button secondary">Выйти</span></div>
+              <div class="sample-input">Поиск по имени</div>
+              <div class="new">
+                <strong>Пора связаться · 1</strong>
+                <div class="due-contact">
+                  <div><p>Ирина Петрова</p><p class="note">раз в неделю · просрочено на 2 дня</p></div>
+                  <span class="sample-button secondary">✓ Связались</span>
+                </div>
+              </div>
+              <div class="list-row"><strong>Контакты</strong><span class="note">Всего 2 контакта</span></div>
+            </div>
+          </figure>
+          <figure class="mock">
+            <figcaption>Главная нового пользователя</figcaption>
+            <div class="screen">
+              <div class="appbar new"><span>boris@example.com</span><span class="sample-button secondary">Выйти</span></div>
+              <p class="new">Добавь первый контакт</p>
+              <span class="sample-button">Добавить контакт</span>
+            </div>
+          </figure>
+          <figure class="mock">
+            <figcaption>Управление группами и выбор в карточке</figcaption>
+            <div class="screen">
+              <h3>Группы</h3>
+              <div class="new"><div class="list-row"><span>Друзья</span><span class="note">2 контакта</span></div></div>
+              <p class="note">На главной и в карточке Анна видит группы из своего аккаунта. Счётчик «Друзья» тоже считает её контакты.</p>
+            </div>
+          </figure>
+          <figure class="mock">
+            <figcaption>Карточка по прямой ссылке</figcaption>
+            <div class="screen">
+              <h3>Ирина Петрова</h3>
+              <p class="note">Группы · Друзья</p>
+              <p class="note">Карточка Ирины в аккаунте Анны.</p>
+              <div class="new"><strong>Контакт не найден</strong><p class="note">Такой ответ Борис получает по той же ссылке. Он же виден для отсутствующей карточки.</p></div>
+            </div>
+          </figure>
+        </div>
+      </section>
+
+      <section id="rules" aria-labelledby="rules-title">
+        <h2 id="rules-title">Как это работает</h2>
+        <div class="stack">
+          <div class="rule"><strong>Один адрес открывает один аккаунт</strong><p>Пробелы по краям убираются, регистр букв не важен. Адрес <code>ANNA@example.com</code> открывает тот же аккаунт, что и <code>anna@example.com</code>. Первое успешное открытие ссылки создаёт аккаунт. Подтверждение запроса выглядит одинаково для новых и известных адресов.</p></div>
+          <div class="rule"><strong>Работает только последняя ссылка</strong><p>Её можно открыть один раз в течение 15 минут. Если Анна запросила письмо в 10:00, а потом ещё одно в 10:03, рабочей остаётся ссылка из письма в 10:03.</p></div>
+          <div class="rule"><strong>До трёх писем на адрес за любые десять минут</strong><p>Четвёртый запрос показывает сообщение о лимите. Третья ссылка остаётся действующей. Адрес другого человека считается отдельно.</p></div>
+          <div class="rule"><strong>Вход сохраняется на устройстве</strong><p>Отсчёт 30 дней начинается заново при каждом посещении на этом устройстве. Если выйти в телефоне, на компьютере вход сохранится.</p></div>
+          <div class="rule"><strong>Письма доставляются в нужное окружение</strong><p>На компьютере и в автотестах Mailpit хранит их в тестовом ящике. На рабочем сервере Resend отправляет письмо в настоящий ящик. Ссылка ведёт в ту CRM, где её запросили.</p></div>
+          <div class="rule"><strong>CRM проверяет принадлежность каждой записи</strong><p>Список, поиск, счётчики и «Пора связаться» учитывают данные вошедшего человека. Анна и Борис могут создать по группе «Друзья». У каждого из них будет свой список.</p></div>
+        </div>
+      </section>
+
+      <section id="data" aria-labelledby="data-title">
+        <h2 id="data-title">Модель данных до и после</h2>
+        <div class="legend" aria-label="Легенда схемы"><span class="legend-old">Как было</span><span class="new">Новое</span></div>
+        <div class="pair">
+          <article class="panel">
+            <h3>Сейчас</h3>
+            <p>У записей общий список для всей CRM.</p>
+            <div class="diagram">
+              <div class="split">
+                <div class="node"><strong>Контакты</strong><span>Имя, данные, частота общения</span></div>
+                <div class="node"><strong>Группы</strong><span>Имя группы уникально в CRM</span></div>
+              </div>
+              <p class="relation">↓ Контакт и группа связаны через ↓</p>
+              <div class="node"><strong>Участие в группе</strong><span>Какие контакты входят в какие группы</span></div>
+              <p class="relation">К каждому контакту также привязаны ↓</p>
+              <div class="split">
+                <div class="node"><strong>Заметки</strong><span>Текст и дата</span></div>
+                <div class="node"><strong>Отметки «Связались»</strong><span>Дата общения</span></div>
+              </div>
+            </div>
+          </article>
+          <article class="panel">
+            <h3>После</h3>
+            <div class="diagram">
+              <div class="node new"><strong>Пользователи</strong><span>Аккаунт с почтой</span></div>
+              <div class="node new"><strong>Служебные записи входа</strong><span>Сессии устройств, проверка ссылок и история выдачи писем</span></div>
+              <p class="relation">У каждого пользователя свои ↓</p>
+              <div class="split">
+                <div class="node"><strong>Контакты</strong><span class="addition">Обязательный владелец</span></div>
+                <div class="node"><strong>Группы</strong><span class="addition">Обязательный владелец, уникальное имя внутри аккаунта</span></div>
+              </div>
+              <p class="relation">↓ Связь внутри одного аккаунта ↓</p>
+              <div class="node"><strong>Участие в группе</strong><span>Контакт ↔ группа</span></div>
+              <p class="relation">У контакта остаются ↓</p>
+              <div class="split">
+                <div class="node"><strong>Заметки</strong><span>Через контакт</span></div>
+                <div class="node"><strong>Отметки «Связались»</strong><span>Через контакт</span></div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="panel example">
+          <h3>Что видят два пользователя</h3>
+          <p>Анна и Борис входят в разных профилях браузера. Анна добавляет Ирину, Борис — Максима. У каждого список, поиск и счётчик показывают только свой контакт.</p>
+          <div class="pair">
+            <div class="node"><strong>Анна видит Ирину</strong><p>По ссылке на Максима — «Контакт не найден».</p></div>
+            <div class="node"><strong>Борис видит Максима</strong><p>По ссылке на Ирину — «Контакт не найден».</p></div>
+          </div>
+        </div>
+        <h3 class="data-heading">Что сделает перенос</h3>
+        <ol class="steps">
+          <li class="panel"><strong>Подготовит таблицы входа и поле владельца.</strong><p>Существующие записи пока сохраняют прежние значения.</p></li>
+          <li class="panel new"><strong>Назначит владельца существующим контактам и группам.</strong><p>В заполненной базе они получат аккаунт с почтой из <code>CRM_OWNER_EMAIL</code>. Это изменение существующих записей. Идентификаторы, содержимое, связи, заметки и отметки сохраняются.</p></li>
+          <li class="panel"><strong>Включит новые правила хранения.</strong><p>Контакт и группа всегда имеют владельца. Уникальность имени группы проверяется внутри его аккаунта. Содержание прежних записей на этом шаге сохраняется.</p></li>
+        </ol>
+        <p class="note status">Это шаги одной запланированной миграции. Если у заполненной базы нельзя определить владельца, перенос останавливается, новая версия не запускается.</p>
+        <h3 class="data-heading">Резервная копия и откат</h3>
+        <p>Перед первой выкаткой остановят старую версию и сохранят копию базы. При ручном откате владелец восстановит эту копию и запустит прежнюю версию приложения, которая ей соответствует.</p>
+      </section>
+
+      <section id="checks" aria-labelledby="checks-title">
+        <h2 id="checks-title">Как проверить руками</h2>
+        <div class="check-intro">
+          <p>Чек-лист для проверки после реализации. Для двух пользователей открой разные профили браузера. Для прямых запросов, переноса и отката используй тестовую базу или проверочное окружение.</p>
+          <p class="note">Mailpit — тестовый почтовый ящик. Он позволяет открыть письмо без настоящего почтового адреса.</p>
+          <p class="check-count" id="check-count" role="status">Отмечено 0 из 36</p>
+        </div>
+        <div class="stack">
+          <details open>
+            <summary>Вход, письмо и сессия · 19 сценариев</summary>
+            <ul class="checks">
+              <li><label><input type="checkbox"><span><strong>Открыть CRM без входа</strong><span>Открой главную, группы и существующую карточку в новом профиле. <em>Результат.</em> Везде поле почты и «Получить ссылку», данные закрыты.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Войти с разным написанием адреса</strong><span>Запроси письмо на тот же адрес с пробелами и заглавными буквами, затем открой ссылку. <em>Результат.</em> Письмо приходит на обычное написание адреса и открывает тот же аккаунт.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Ввести неверный адрес</strong><span>Введи неверный адрес в форму. <em>Результат.</em> Под полем «Проверь адрес почты», письма в Mailpit нет.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Отправить неверный адрес в обход формы</strong><span>На тестовой CRM повтори проверку адреса на сервере. <em>Результат.</em> Сервер отклоняет неверный адрес, письма нет.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Запросить письмо для старого и нового адреса</strong><span>Запроси письмо для уже знакомого и нового адреса. <em>Результат.</em> Подтверждение одинаковое по форме, оба письма приходят.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Войти впервые и повторно</strong><span>Открой ссылку для нового адреса, добавь контакт, выйди и войди по новой ссылке. <em>Результат.</em> Оба входа ведут на главную без ввода имени и пароля, контакт сохранился.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Открыть ссылку до истечения срока</strong><span>В течение 15 минут открой последнюю неиспользованную ссылку. <em>Результат.</em> Открывается CRM.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Открыть использованную ссылку</strong><span>Войди по ссылке и открой её ещё раз в браузере без входа. <em>Результат.</em> Видно сообщение об устаревшей ссылке и кнопку возврата на вход.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Открыть ссылку через 15 минут</strong><span>Подожди 15 минут и открой неиспользованную ссылку. <em>Результат.</em> Сообщение об устаревшей ссылке и кнопка на страницу входа.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Запросить новую ссылку</strong><span>Запроси две ссылки на один адрес. Открой первую, затем вторую. <em>Результат.</em> Первая устарела, вторая открывает CRM.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Достичь лимита и дождаться его освобождения</strong><span>За десять минут сделай четыре запроса на один адрес из разных браузеров, меняя регистр букв. <em>Результат.</em> Приходят три письма, четвёртый запрос показывает лимит, третья ссылка работает. Через десять минут после первого письма можно запросить новое.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Запросить ссылку на другой адрес</strong><span>После лимита на первом адресе запроси ссылку на второй. <em>Результат.</em> Письмо на второй адрес приходит.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Продлить сессию посещением</strong><span>Войди и посети CRM на том же устройстве до истечения 30 дней. Зайди после 30 дней с первого входа, но раньше 30 дней с посещения. <em>Результат.</em> Открывается CRM без нового письма.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Вернуться после 30 дней без посещений</strong><span>Открой CRM после 30 дней без посещений на этом устройстве. <em>Результат.</em> Открывается вход.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Войти на двух устройствах и выйти на одном</strong><span>Открой вход в двух профилях по отдельным ссылкам на один адрес, затем выйди в первом. <em>Результат.</em> До выхода почта в обеих шапках совпадает. После выхода первый профиль просит войти, второй продолжает работать.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Открыть полученное письмо</strong><span>Запроси и открой письмо. <em>Результат.</em> Отправитель «Личная CRM» с адреса <code>noreply@mail.crm.&lt;домен&gt;</code>, тема «Вход в Личную CRM», кнопка «Войти», срок 15 минут и пояснение для тех, кто вход не запрашивал. Кнопка открывает нужное окружение.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Войти локально с произвольным адресом</strong><span>В локальной CRM запроси письмо на корректный адрес без ящика. <em>Результат.</em> Письмо видно в Mailpit, по ссылке можно войти.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Запустить браузерный тест</strong><span>Посмотри запуск браузерного теста входа на GitHub. <em>Результат.</em> Тест получает ссылку из Mailpit, настоящие письма не уходят.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Получить письмо с рабочего сервера</strong><span>Запроси ссылку на доступный настоящий ящик из рабочей CRM. <em>Результат.</em> Письмо приходит через Resend и открывает рабочую CRM.</span></span></label></li>
+            </ul>
+          </details>
+          <details>
+            <summary>Свои данные, группы и перенос · 13 сценариев</summary>
+            <ul class="checks">
+              <li><label><input type="checkbox"><span><strong>Изменить свои записи</strong><span>Создай контакт и группу, свяжи их, добавь заметку и отметку, перезагрузи карточку. <em>Результат.</em> Всё видно в том же аккаунте.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Отправить запрос на изменение без сессии</strong><span>Проверь серверное изменение тестового контакта из профиля без входа. <em>Результат.</em> Запрос отклонён, владелец видит исходные данные.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Второй пользователь не видит контакт первого</strong><span>Войди за Анну и Бориса по отдельным ссылкам из Mailpit в двух профилях браузера. Добавь по контакту в каждом аккаунте. В обоих профилях открой список, поищи оба имени и перейди по прямой ссылке на чужую карточку. <em>Результат.</em> Каждый видит свой контакт в списке и поиске. Чужой контакт отсутствует, не влияет на счётчик, а по его ссылке видно «Контакт не найден». Этот сценарий в обе стороны проверит отдельный браузерный тест из задачи 3.1.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Открыть несуществующую карточку</strong><span>Открой ссылку на отсутствующую тестовую карточку после входа. <em>Результат.</em> «Контакт не найден», как и для чужой карточки.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Изменить чужой контакт по идентификатору</strong><span>На тестовой базе проверь отказ при прямом редактировании и удалении контакта Анны от имени Бориса. <em>Результат.</em> Ответ как для отсутствующей записи, карточка Анны прежняя.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Изменить заметки или отметки чужого контакта</strong><span>На тестовой базе проверь попытки Бориса дописать заметку, поставить или снять отметку у контакта Анны. <em>Результат.</em> Все попытки отклонены, заметки и отметки Анны сохранены.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Изменить или привязать чужую группу</strong><span>На тестовой базе проверь переименование, удаление и назначение группы Анны при создании и редактировании контакта Бориса. <em>Результат.</em> Группа прежняя, связи с контактом Бориса нет.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Создать одноимённые группы</strong><span>Создай «Друзья» у Анны и Бориса. Попробуй создать «друзья» ещё раз у Бориса. <em>Результат.</em> Первая группа есть у каждого, повтор у Бориса отклонён.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Проверить список, выбор и фильтр групп</strong><span>Разложи контакты по группам обоих аккаунтов. У Бориса открой управление, выбор в карточке, фильтр и адрес с группой Анны. <em>Результат.</em> В списках и счётчиках только данные Бориса, его фильтр работает, а чужая группа считается отсутствующей.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Войти новым пользователем в CRM с данными владельца</strong><span>Войди с новой почтой там, где у владельца уже есть контакты, и создай свой. <em>Результат.</em> Сначала «Добавь первый контакт», затем виден свой контакт.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Проверить старые записи после выкатки</strong><span>На копии старой базы после переноса войди с почтой владельца, затем с другой. <em>Результат.</em> У владельца прежние контакты, заметки, группы, связи и отметки. Сверка подтверждает прежние количества, другой аккаунт их не видит.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Открыть CRM с демо-данными</strong><span>Заполни локальную базу демо-данными, войди как владелец и с другим адресом. <em>Результат.</em> Демо-контакты, заметки и группы видны владельцу. У второго аккаунта пустой список.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Вернуться к версии до входа</strong><span>В проверочном окружении владелец выполняет ручной откат первой выкатки. <em>Результат.</em> Работает прежняя версия с базой из копии перед выкаткой.</span></span></label></li>
+            </ul>
+          </details>
+          <details>
+            <summary>Блок «Пора связаться» · 4 сценария</summary>
+            <ul class="checks">
+              <li><label><input type="checkbox"><span><strong>Блок показывает просроченные контакты</strong><span>Войди и задай трём контактам с давними заметками частоту «Раз в неделю». <em>Результат.</em> На главной есть блок с числом, тремя строками, подписями срока и галочками. Имя открывает карточку.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Никого не пора — блока нет</strong><span>Открой главную, когда ни у кого из своих контактов срок не наступил. <em>Результат.</em> Под поиском сразу список контактов.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Во время поиска блока нет</strong><span>Когда блок виден, набери запрос и затем очисти поиск. <em>Результат.</em> С запросом блок скрыт. После очистки он возвращается.</span></span></label></li>
+              <li><label><input type="checkbox"><span><strong>Чужие контакты не попадают в блок и счётчик</strong><span>Сделай по одному просроченному контакту у Анны и Бориса. У Бориса отметь «Связались». <em>Результат.</em> У Бориса сначала один свой контакт и число 1, затем блока нет. У Анны её контакт остаётся.</span></span></label></li>
+            </ul>
+          </details>
+        </div>
+      </section>
+
+      <section id="decisions" aria-labelledby="decisions-title">
+        <h2 id="decisions-title">Что агент решил сам</h2>
+        <div class="pair">
+          <div class="panel">
+            <h3>Продуктовые решения</h3>
+            <p>Вход по почте, сроки, тексты и доступ к своим данным взяты из требований. Пунктирные экраны показывают их на примерах.</p>
+          </div>
+          <div class="panel">
+            <h3>Технические решения</h3>
+            <ul class="points">
+              <li>Сервер хранит сессии устройств и учитывает выдачу писем в PostgreSQL.</li>
+              <li>Проверка ссылки использует её защищённый отпечаток. При проверке доступа сервер берёт владельца из действующей сессии.</li>
+              <li>Адрес владельца для переноса и демо-данных задаётся через согласованную настройку <code>CRM_OWNER_EMAIL</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="questions-title">
+        <h2 id="questions-title">Что осталось неясным</h2>
+        <p>Открытых продуктовых вопросов на этапе обзора нет. Адрес владельца и способ его задания согласованы.</p>
+      </section>
+    </main>
+    <footer class="note">Обзор изменения <code>user-auth</code> · OpenSpec</footer>
+  </div>
+  <script>
+    const checklist = document.querySelector('#checks');
+    const boxes = Array.from(checklist.querySelectorAll('input[type="checkbox"]'));
+    const count = document.querySelector('#check-count');
+
+    checklist.addEventListener('change', () => {
+      const completed = boxes.filter((box) => box.checked).length;
+      count.textContent = `Отмечено ${completed} из ${boxes.length}`;
+    });
+  </script>
+</body>
+</html>

@@ -5,6 +5,7 @@ IMAGE=ghcr.io/111ani/personal-crm
 APP_HOST=app.lena-14.ru
 RELEASE_FILE="$APP_DIR/release.env"
 RESTORE_PENDING="$APP_DIR/restore.pending"
+AUTH_BASELINE_FILE="$APP_DIR/auth-baseline"
 
 # sudo -u app-deploy keeps the caller's directory, which app-deploy cannot read
 cd "$APP_DIR"
@@ -38,6 +39,16 @@ container_app_tag() {
   case "$image" in
     "$IMAGE:"*) printf '%s\n' "${image##*:}" ;;
     *) fail "unexpected app image: $image" ;;
+  esac
+}
+
+image_database_schema() {
+  local marker
+  marker=$(docker image inspect --format '{{ with .Config.Labels }}{{ index . "io.personal-crm.database-schema" }}{{ end }}' "$IMAGE:$1") || return 1
+  case "$marker" in
+    owner-v1) echo owner-v1 ;;
+    '' | '<no value>') echo legacy ;;
+    *) fail "unknown database schema label on image $1: $marker" ;;
   esac
 }
 

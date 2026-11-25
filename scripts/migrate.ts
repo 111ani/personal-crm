@@ -4,9 +4,9 @@
 
 import { existsSync } from "node:fs";
 
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
+
+import { migrateDatabase } from "./migrate-db.ts";
 
 async function countApplied(pool: Pool): Promise<number> {
   const table = await pool.query<{ exists: boolean }>(
@@ -22,7 +22,7 @@ async function countApplied(pool: Pool): Promise<number> {
 }
 
 async function main() {
-  if (existsSync(".env")) {
+  if (!process.env.DATABASE_URL && existsSync(".env")) {
     process.loadEnvFile(".env");
   }
   const connectionString = process.env.DATABASE_URL;
@@ -33,7 +33,7 @@ async function main() {
   const pool = new Pool({ connectionString });
   try {
     const before = await countApplied(pool);
-    await migrate(drizzle(pool), { migrationsFolder: "drizzle" });
+    await migrateDatabase(pool, process.env.CRM_OWNER_EMAIL);
     const after = await countApplied(pool);
     console.log(
       `Migrations: ${after - before} applied now, ${after} applied in total`,

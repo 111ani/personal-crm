@@ -4,12 +4,19 @@ import { beforeEach, vi } from "vitest";
 
 import { getDb } from "@/db";
 
+import { ensureTestOwner } from "./factories";
 import { emptyTestDatabase } from "./test-database";
 
 // Cache purging only works inside a running Next.js
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
   revalidateTag: vi.fn(),
+}));
+
+// Action tests model a signed-in user. Browser and authentication tests
+// exercise the real session checks separately.
+vi.mock("@/lib/auth/session", () => ({
+  getCurrentUser: () => ensureTestOwner(),
 }));
 
 beforeEach(async () => {
