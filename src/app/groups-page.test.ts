@@ -155,10 +155,6 @@ describe("Переименовать группу", () => {
     expect(await groupRows()).toEqual(["Теннис — пока никого"]);
   });
 
-  // "Отмена" exists only on the screen: nothing is sent to the server, so
-  // there is nothing to run here. Checked by hand (task 3.3)
-  test.todo("Отменить переименование");
-
   test("Переименовать в занятое название", async () => {
     await insertGroup("Семья");
     const friendsId = await insertGroup("Друзья");
@@ -205,8 +201,4 @@ describe("Удалить группу", () => {
 
     expect(await deleteGroup(groupId)).toEqual({ status: "success" });
   });
-
-  // The confirmation window exists only on the screen: "Отмена" sends
-  // nothing. Checked by hand (task 3.3)
-  test.todo("Передумать удалять");
 });

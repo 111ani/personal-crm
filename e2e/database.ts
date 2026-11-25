@@ -4,7 +4,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-import { contacts } from "../src/db/schema";
+import { contactGroups, contacts, groups } from "../src/db/schema";
 import { getE2eDatabaseUrl } from "../test/database-url";
 import { emptyTestDatabase } from "../test/test-database";
 
@@ -27,5 +27,28 @@ export async function insertContacts(names: string[]) {
     drizzle(pool)
       .insert(contacts)
       .values(names.map((name) => ({ name }))),
+  );
+}
+
+export function insertContactWithGroups(
+  contactName: string,
+  assignedGroupName: string,
+  unassignedGroupName: string,
+) {
+  return withPool((pool) =>
+    drizzle(pool).transaction(async (tx) => {
+      const [contact] = await tx
+        .insert(contacts)
+        .values({ name: contactName })
+        .returning({ id: contacts.id });
+      const [assignedGroup] = await tx
+        .insert(groups)
+        .values({ name: assignedGroupName })
+        .returning({ id: groups.id });
+      await tx.insert(groups).values({ name: unassignedGroupName });
+      await tx
+        .insert(contactGroups)
+        .values({ contactId: contact.id, groupId: assignedGroup.id });
+    }),
   );
 }
