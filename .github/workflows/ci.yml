@@ -68,6 +68,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
+      mailpit:
+        image: axllent/mailpit:v1.34.0
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
       postgres:
         image: postgres:18-alpine
         env:

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, eq, exists, gte, inArray, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import {
   groups,
   notes,
 } from "@/db/schema";
+import { getCurrentUser } from "@/lib/auth/session";
 import { startOfToday } from "@/lib/contacts/queries";
 import {
   checkInIdSchema,
@@ -79,6 +80,13 @@ export type CheckInChangeResult =
 
 const SAVE_FAILED = "Не удалось сохранить. Попробуйте ещё раз";
 const CHECK_IN_FAILED = "Не удалось отметить. Попробуйте ещё раз";
+const SIGN_IN_REQUIRED = "Войдите в CRM, чтобы продолжить";
+const CONTACT_NOT_FOUND = "Контакт не найден";
+const GROUP_NOT_FOUND = "Группа не найдена";
+const UNAVAILABLE_GROUP =
+  "Одна из групп недоступна. Обнови страницу и выбери группы снова";
+
+class UnavailableGroupError extends Error {}
 
 function firstErrors<T extends string>(error: z.ZodError) {
   const fieldErrors: Partial<Record<T, string>> = {};
@@ -97,27 +105,30 @@ function refreshAllPages() {
   revalidatePath("/", "layout");
 }
 
-// Makes the contact's groups exactly `groupIds`. Only groups that exist are
-// added: one deleted while the form was open is skipped, the rest is saved.
-// Runs inside the transaction that saves the contact
+// Keep the selected groups alive for the full contact transaction.
 async function replaceContactGroups(
-  tx: Pick<ReturnType<typeof getDb>, "delete" | "insert">,
+  tx: Pick<ReturnType<typeof getDb>, "delete" | "insert" | "select">,
+  ownerId: string,
   contactId: string,
   groupIds: string[],
 ) {
+  const selected =
+    groupIds.length === 0
+      ? []
+      : await tx
+          .select({ groupId: groups.id })
+          .from(groups)
+          .where(and(eq(groups.ownerId, ownerId), inArray(groups.id, groupIds)))
+          .orderBy(groups.id)
+          .for("key share");
+  if (selected.length !== groupIds.length) throw new UnavailableGroupError();
+
   await tx.delete(contactGroups).where(eq(contactGroups.contactId, contactId));
-  if (groupIds.length === 0) {
-    return;
+  if (selected.length > 0) {
+    await tx
+      .insert(contactGroups)
+      .values(selected.map(({ groupId }) => ({ contactId, groupId })));
   }
-  await tx.insert(contactGroups).select((qb) =>
-    qb
-      .select({
-        contactId: sql<string>`${contactId}::uuid`.as("contact_id"),
-        groupId: groups.id,
-      })
-      .from(groups)
-      .where(inArray(groups.id, groupIds)),
-  );
 }
 
 export async function createContact(
@@ -126,6 +137,15 @@ export async function createContact(
 ): Promise<ContactFormState> {
   const values = readContactForm(formData);
   const groupIds = readGroupIds(formData);
+  const user = await getCurrentUser();
+  if (!user)
+    return {
+      status: "error",
+      message: SIGN_IN_REQUIRED,
+      fieldErrors: {},
+      values,
+      groupIds,
+    };
   const parsed = contactSchema.safeParse(values);
   const parsedGroupIds = groupIdsSchema.safeParse(groupIds);
   if (!parsed.success || !parsedGroupIds.success) {
@@ -145,19 +165,23 @@ export async function createContact(
     const created = await getDb().transaction(async (tx) => {
       const [row] = await tx
         .insert(contacts)
-        .values(parsed.data)
+        .values({ ...parsed.data, ownerId: user.id })
         .returning({ id: contacts.id, name: contacts.name });
-      await replaceContactGroups(tx, row.id, parsedGroupIds.data);
+      await replaceContactGroups(tx, user.id, row.id, parsedGroupIds.data);
       return row;
     });
 
     refreshAllPages();
     return { status: "success", contactId: created.id, name: created.name };
   } catch (error) {
-    console.error("Failed to create contact", error);
+    if (!(error instanceof UnavailableGroupError))
+      console.error("Failed to create contact", error);
     return {
       status: "error",
-      message: SAVE_FAILED,
+      message:
+        error instanceof UnavailableGroupError
+          ? UNAVAILABLE_GROUP
+          : SAVE_FAILED,
       fieldErrors: {},
       values,
       groupIds,
@@ -187,6 +211,9 @@ export async function updateContact(
     frequency: frequencyValues,
     frequencyError,
   });
+
+  const user = await getCurrentUser();
+  if (!user) return failure(SIGN_IN_REQUIRED);
 
   const id = contactIdSchema.safeParse(contactId);
   if (!id.success) {
@@ -233,10 +260,10 @@ export async function updateContact(
               : sql`case when ${contacts.contactFrequency} = ${contactFrequency} and ${contacts.contactFrequencyDays} is not distinct from ${contactFrequencyDays} then ${contacts.contactFrequencySetAt} else now() end`,
           updatedAt: sql`now()`,
         })
-        .where(eq(contacts.id, id.data))
+        .where(and(eq(contacts.id, id.data), eq(contacts.ownerId, user.id)))
         .returning({ id: contacts.id, name: contacts.name });
       if (row) {
-        await replaceContactGroups(tx, row.id, parsedGroupIds.data);
+        await replaceContactGroups(tx, user.id, row.id, parsedGroupIds.data);
       }
       return row;
     });
@@ -248,6 +275,8 @@ export async function updateContact(
     refreshAllPages();
     return { status: "success", contactId: updated.id, name: updated.name };
   } catch (error) {
+    if (error instanceof UnavailableGroupError)
+      return failure(UNAVAILABLE_GROUP);
     console.error("Failed to update contact", error);
     return failure(SAVE_FAILED);
   }
@@ -256,15 +285,20 @@ export async function updateContact(
 export async function deleteContact(
   contactId: string,
 ): Promise<DeleteContactState> {
+  const user = await getCurrentUser();
+  if (!user) return { status: "error", message: SIGN_IN_REQUIRED };
   const id = contactIdSchema.safeParse(contactId);
   if (!id.success) {
     return { status: "error", message: "Контакт не найден" };
   }
 
   try {
-    // Notes go too: notes.contact_id is ON DELETE CASCADE. A contact that
-    // is already gone is not an error - the user gets what they wanted
-    await getDb().delete(contacts).where(eq(contacts.id, id.data));
+    // Notes and check-ins are removed by their foreign keys.
+    const [deleted] = await getDb()
+      .delete(contacts)
+      .where(and(eq(contacts.id, id.data), eq(contacts.ownerId, user.id)))
+      .returning({ id: contacts.id });
+    if (!deleted) return { status: "error", message: CONTACT_NOT_FOUND };
   } catch (error) {
     console.error("Failed to delete contact", error);
     return {
@@ -282,12 +316,17 @@ export async function deleteContact(
 
 // The group whose name equals the given one, letter case aside (the same rule
 // as the unique index on lower(name)); `exceptId` skips the group itself
-async function findGroupByName(name: string, exceptId?: string) {
+async function findGroupByName(
+  ownerId: string,
+  name: string,
+  exceptId?: string,
+) {
   const [found] = await getDb()
     .select({ id: groups.id, name: groups.name })
     .from(groups)
     .where(
       and(
+        eq(groups.ownerId, ownerId),
         sql`lower(${groups.name}) = lower(${name})`,
         exceptId ? ne(groups.id, exceptId) : undefined,
       ),
@@ -310,6 +349,8 @@ function isUniqueViolation(error: unknown) {
  * field just ticks that group
  */
 export async function createGroup(name: string): Promise<CreateGroupResult> {
+  const user = await getCurrentUser();
+  if (!user) return { status: "error", message: SIGN_IN_REQUIRED };
   const parsed = groupNameSchema.safeParse(name);
   if (!parsed.success) {
     return { status: "error", message: parsed.error.issues[0].message };
@@ -318,7 +359,7 @@ export async function createGroup(name: string): Promise<CreateGroupResult> {
   try {
     const [created] = await getDb()
       .insert(groups)
-      .values({ name: parsed.data })
+      .values({ name: parsed.data, ownerId: user.id })
       .onConflictDoNothing()
       .returning({ id: groups.id, name: groups.name });
     if (created) {
@@ -326,7 +367,7 @@ export async function createGroup(name: string): Promise<CreateGroupResult> {
       return { status: "created", group: created };
     }
 
-    const existing = await findGroupByName(parsed.data);
+    const existing = await findGroupByName(user.id, parsed.data);
     if (existing) {
       return {
         status: "exists",
@@ -345,6 +386,8 @@ export async function renameGroup(
   groupId: string,
   name: string,
 ): Promise<GroupResult> {
+  const user = await getCurrentUser();
+  if (!user) return { status: "error", message: SIGN_IN_REQUIRED };
   const id = groupIdSchema.safeParse(groupId);
   if (!id.success) {
     return { status: "error", message: "Группа не найдена" };
@@ -358,7 +401,7 @@ export async function renameGroup(
     const [updated] = await getDb()
       .update(groups)
       .set({ name: parsed.data })
-      .where(eq(groups.id, id.data))
+      .where(and(eq(groups.id, id.data), eq(groups.ownerId, user.id)))
       .returning({ id: groups.id });
     if (!updated) {
       return {
@@ -371,7 +414,7 @@ export async function renameGroup(
     return { status: "success" };
   } catch (error) {
     if (isUniqueViolation(error)) {
-      const taken = await findGroupByName(parsed.data, id.data);
+      const taken = await findGroupByName(user.id, parsed.data, id.data);
       if (taken) {
         return { status: "error", message: groupExistsMessage(taken.name) };
       }
@@ -382,15 +425,20 @@ export async function renameGroup(
 }
 
 export async function deleteGroup(groupId: string): Promise<GroupResult> {
+  const user = await getCurrentUser();
+  if (!user) return { status: "error", message: SIGN_IN_REQUIRED };
   const id = groupIdSchema.safeParse(groupId);
   if (!id.success) {
-    return { status: "error", message: "Группа не найдена" };
+    return { status: "error", message: GROUP_NOT_FOUND };
   }
 
   try {
-    // The people stay: contact_groups.group_id is ON DELETE CASCADE, so only
-    // the links go. A group that is already gone is not an error
-    await getDb().delete(groups).where(eq(groups.id, id.data));
+    // The foreign key removes memberships while keeping the contacts.
+    const [deleted] = await getDb()
+      .delete(groups)
+      .where(and(eq(groups.id, id.data), eq(groups.ownerId, user.id)))
+      .returning({ id: groups.id });
+    if (!deleted) return { status: "error", message: GROUP_NOT_FOUND };
   } catch (error) {
     console.error("Failed to delete group", error);
     return {
@@ -410,6 +458,8 @@ export async function addNote(
 ): Promise<NoteFormState> {
   const rawBody = formData.get("body");
   const body = typeof rawBody === "string" ? rawBody : "";
+  const user = await getCurrentUser();
+  if (!user) return { status: "error", message: SIGN_IN_REQUIRED, body };
 
   const id = contactIdSchema.safeParse(contactId);
   if (!id.success) {
@@ -430,7 +480,7 @@ export async function addNote(
       const [contact] = await tx
         .update(contacts)
         .set({ updatedAt: sql`now()` })
-        .where(eq(contacts.id, id.data))
+        .where(and(eq(contacts.id, id.data), eq(contacts.ownerId, user.id)))
         .returning({ id: contacts.id });
       if (!contact) {
         return false;
@@ -459,6 +509,8 @@ export async function addNote(
 
 /** "Связались": records contact now. The id lets the user undo exactly it */
 export async function checkIn(contactId: string): Promise<CheckInResult> {
+  const user = await getCurrentUser();
+  if (!user) return { status: "error", message: SIGN_IN_REQUIRED };
   const id = contactIdSchema.safeParse(contactId);
   if (!id.success) {
     return { status: "error", message: "Контакт не найден" };
@@ -467,8 +519,18 @@ export async function checkIn(contactId: string): Promise<CheckInResult> {
   try {
     const [created] = await getDb()
       .insert(contactCheckIns)
-      .values({ contactId: id.data })
+      .select((qb) =>
+        qb
+          .select({
+            id: sql<string>`gen_random_uuid()`.as("id"),
+            contactId: contacts.id,
+            createdAt: sql<Date>`now()`.as("created_at"),
+          })
+          .from(contacts)
+          .where(and(eq(contacts.id, id.data), eq(contacts.ownerId, user.id))),
+      )
       .returning({ id: contactCheckIns.id });
+    if (!created) return { status: "error", message: CONTACT_NOT_FOUND };
 
     refreshAllPages();
     return { status: "success", checkInId: created.id };
@@ -482,16 +544,35 @@ export async function checkIn(contactId: string): Promise<CheckInResult> {
 export async function undoCheckIn(
   checkInId: string,
 ): Promise<CheckInChangeResult> {
+  const user = await getCurrentUser();
+  if (!user) return { status: "error", message: SIGN_IN_REQUIRED };
   const id = checkInIdSchema.safeParse(checkInId);
   if (!id.success) {
     return { status: "error", message: SAVE_FAILED };
   }
 
   try {
-    // A check-in that is already gone is not an error
-    await getDb()
+    const db = getDb();
+    const [deleted] = await db
       .delete(contactCheckIns)
-      .where(eq(contactCheckIns.id, id.data));
+      .where(
+        and(
+          eq(contactCheckIns.id, id.data),
+          exists(
+            db
+              .select({ id: contacts.id })
+              .from(contacts)
+              .where(
+                and(
+                  eq(contacts.id, contactCheckIns.contactId),
+                  eq(contacts.ownerId, user.id),
+                ),
+              ),
+          ),
+        ),
+      )
+      .returning({ id: contactCheckIns.id });
+    if (!deleted) return { status: "error", message: SAVE_FAILED };
   } catch (error) {
     console.error("Failed to undo check-in", error);
     return { status: "error", message: SAVE_FAILED };
@@ -505,20 +586,32 @@ export async function undoCheckIn(
 export async function clearTodayCheckIns(
   contactId: string,
 ): Promise<CheckInChangeResult> {
+  const user = await getCurrentUser();
+  if (!user) return { status: "error", message: SIGN_IN_REQUIRED };
   const id = contactIdSchema.safeParse(contactId);
   if (!id.success) {
     return { status: "error", message: "Контакт не найден" };
   }
 
   try {
-    await getDb()
-      .delete(contactCheckIns)
-      .where(
-        and(
-          eq(contactCheckIns.contactId, id.data),
-          gte(contactCheckIns.createdAt, startOfToday),
-        ),
-      );
+    const found = await getDb().transaction(async (tx) => {
+      const [contact] = await tx
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(and(eq(contacts.id, id.data), eq(contacts.ownerId, user.id)))
+        .for("key share");
+      if (!contact) return false;
+      await tx
+        .delete(contactCheckIns)
+        .where(
+          and(
+            eq(contactCheckIns.contactId, contact.id),
+            gte(contactCheckIns.createdAt, startOfToday),
+          ),
+        );
+      return true;
+    });
+    if (!found) return { status: "error", message: CONTACT_NOT_FOUND };
   } catch (error) {
     console.error("Failed to clear today's check-ins", error);
     return { status: "error", message: SAVE_FAILED };

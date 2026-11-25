@@ -4,21 +4,10 @@ import { describe, expect, test } from "vitest";
 import { getDb } from "@/db";
 import { contactGroups, contacts, groups } from "@/db/schema";
 
-async function createContact(name: string) {
-  const [contact] = await getDb()
-    .insert(contacts)
-    .values({ name })
-    .returning({ id: contacts.id });
-  return contact.id;
-}
-
-async function createGroup(name: string) {
-  const [group] = await getDb()
-    .insert(groups)
-    .values({ name })
-    .returning({ id: groups.id });
-  return group.id;
-}
+import {
+  insertContact as createContact,
+  insertGroup as createGroup,
+} from "../../test/factories";
 
 describe("таблицы групп", () => {
   test("в базу нельзя записать группы «Теннис» и «теннис», а «Теннис» и «Семья» — можно", async () => {

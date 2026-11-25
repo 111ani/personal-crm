@@ -22,6 +22,7 @@ RUN pnpm build && rm -rf .next/cache
 
 FROM node:24-alpine AS runner
 LABEL org.opencontainers.image.source=https://github.com/111ani/personal-crm
+LABEL io.personal-crm.database-schema=owner-v1
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 # Node runs scripts/*.ts as ES modules on its own; package.json has no
 # "type" field, so silence the warning about that
@@ -35,6 +36,7 @@ COPY scripts ./scripts
 COPY src/db/schema.ts ./src/db/schema.ts
 # schema.ts takes the list of contact frequencies from here
 COPY src/lib/contacts/frequency.ts ./src/lib/contacts/frequency.ts
+COPY src/lib/auth/email.ts ./src/lib/auth/email.ts
 USER node
 EXPOSE 3000
 CMD ["node", "node_modules/next/dist/bin/next", "start", "--hostname", "0.0.0.0", "--port", "3000"]

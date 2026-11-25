@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Manrope, Playfair_Display } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
+import { getCurrentUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 
 import "./globals.css";
@@ -33,13 +36,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <header className="border-b">
-          <div className="mx-auto flex w-full max-w-300 items-center px-5 py-5 md:px-10 md:py-7">
+          <div className="mx-auto flex w-full max-w-300 flex-wrap items-center justify-between gap-3 px-5 py-5 md:px-10 md:py-7">
             <Link
               href="/"
               className="rounded-sm text-eyebrow font-semibold text-brand uppercase outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               Личная CRM
             </Link>
+            <Suspense>
+              <AccountHeader />
+            </Suspense>
           </div>
         </header>
         <main className="mx-auto w-full max-w-300 flex-1 px-5 pt-8 pb-12 md:px-10 md:pt-12 md:pb-20">
@@ -48,5 +54,27 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Toaster theme="light" position="bottom-right" />
       </body>
     </html>
+  );
+}
+
+async function AccountHeader() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  return (
+    <form
+      method="post"
+      action="/auth/sign-out"
+      className="flex min-w-0 items-center gap-3"
+    >
+      <span
+        className="min-w-0 truncate text-sm text-soft-foreground"
+        title={user.email}
+      >
+        {user.email}
+      </span>
+      <Button type="submit" variant="ghost" size="sm">
+        Выйти
+      </Button>
+    </form>
   );
 }

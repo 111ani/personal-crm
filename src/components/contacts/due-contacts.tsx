@@ -7,8 +7,10 @@ import { formatFrequency, formatOverdue } from "@/lib/format";
  * (not to get in the way) or when nobody is due.
  */
 export async function DueContacts({
+  ownerId,
   searchParams,
 }: {
+  ownerId: string;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
@@ -17,7 +19,7 @@ export async function DueContacts({
     return null;
   }
 
-  const contacts = await listDueContacts();
+  const contacts = await listDueContacts(ownerId);
   if (contacts.length === 0) {
     return null;
   }

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Note } from "@/db/schema";
+import { requireUser } from "@/lib/auth/session";
 import { getContactWithNotes, type ContactDue } from "@/lib/contacts/queries";
 import { contactIdSchema } from "@/lib/contacts/validation";
 import { listGroups } from "@/lib/groups/queries";
@@ -59,14 +60,15 @@ async function ContactDetails({
 }: {
   params: PageProps<"/contacts/[id]">["params"];
 }) {
+  const { id: ownerId } = await requireUser();
   const { id } = await params;
   if (!contactIdSchema.safeParse(id).success) {
     notFound();
   }
 
   const [data, allGroups] = await Promise.all([
-    getContactWithNotes(id),
-    listGroups(),
+    getContactWithNotes(ownerId, id),
+    listGroups(ownerId),
   ]);
   if (!data) {
     notFound();

@@ -1,9 +1,9 @@
 import "server-only";
 
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 
 import { getDb } from "@/db";
-import { contactGroups, groups } from "@/db/schema";
+import { contactGroups, contacts, groups } from "@/db/schema";
 
 export type GroupWithCount = {
   id: string;
@@ -20,15 +20,23 @@ const byName = new Intl.Collator("ru-RU", { sensitivity: "base" });
  * Sorted here, not in the database: the order then does not depend on how
  * the database server was set up
  */
-export async function listGroups(): Promise<GroupWithCount[]> {
+export async function listGroups(ownerId: string): Promise<GroupWithCount[]> {
   const rows = await getDb()
     .select({
       id: groups.id,
       name: groups.name,
-      contactCount: count(contactGroups.contactId),
+      contactCount: count(contacts.id),
     })
     .from(groups)
     .leftJoin(contactGroups, eq(contactGroups.groupId, groups.id))
+    .leftJoin(
+      contacts,
+      and(
+        eq(contacts.id, contactGroups.contactId),
+        eq(contacts.ownerId, ownerId),
+      ),
+    )
+    .where(eq(groups.ownerId, ownerId))
     .groupBy(groups.id);
 
   return rows.sort(

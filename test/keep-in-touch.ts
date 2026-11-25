@@ -4,7 +4,7 @@
 import { getContactWithNotes, listDueContacts } from "@/lib/contacts/queries";
 import { formatDayMonth, formatFrequency, formatOverdue } from "@/lib/format";
 
-import { dayFromToday } from "./factories";
+import { dayFromToday, TEST_OWNER_ID } from "./factories";
 
 export const idle = { status: "idle" } as const;
 
@@ -31,7 +31,7 @@ export function cardForm(
 
 /** The "Как часто общаться" part of a contact's card, as after a reload */
 export async function openCard(contactId: string) {
-  const data = await getContactWithNotes(contactId);
+  const data = await getContactWithNotes(TEST_OWNER_ID, contactId);
   if (!data) {
     throw new Error(`Contact ${contactId} not found`);
   }
@@ -61,7 +61,7 @@ export async function openCard(contactId: string) {
 
 /** "Пора связаться" on the home page; `title` is null when there is no block */
 export async function openDueBlock() {
-  const contacts = await listDueContacts();
+  const contacts = await listDueContacts(TEST_OWNER_ID);
   const rows = contacts.map((contact) => ({
     id: contact.id,
     name: contact.name,

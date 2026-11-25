@@ -4,6 +4,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { insertContacts, resetDatabase } from "./database";
+import { fixtureEmail, signIn } from "./sign-in";
 
 const knownPeople = ["Анна Смирнова", "Борис Петров", "Вера Иванова"];
 
@@ -40,9 +41,11 @@ async function expectSavedCard(page: Page) {
   ).toBeVisible();
 }
 
+let ownerEmail: string;
 test.beforeEach(async () => {
   await resetDatabase();
-  await insertContacts(knownPeople);
+  ownerEmail = fixtureEmail();
+  await insertContacts(ownerEmail, knownPeople);
 });
 
 test("Главный сценарий: список → новый контакт → поиск по имени → заметка; в другом браузере те же данные", async ({
@@ -51,7 +54,7 @@ test("Главный сценарий: список → новый контак�
   baseURL,
 }) => {
   await test.step("Открыл — видно список всех контактов", async () => {
-    await page.goto("/");
+    await signIn(page, ownerEmail);
     const list = contactList(page);
     await expect(list.getByText("Всего 3 контакта")).toBeVisible();
     await expect(list.getByRole("link")).toHaveCount(knownPeople.length);
@@ -107,7 +110,7 @@ test("Главный сценарий: список → новый контак�
     const otherBrowser = await browser.newContext({ baseURL });
     try {
       const otherPage = await otherBrowser.newPage();
-      await otherPage.goto("/");
+      await signIn(otherPage, ownerEmail);
       const list = contactList(otherPage);
       await expect(list.getByText("Всего 4 контакта")).toBeVisible();
       for (const name of [...knownPeople, newContact.name]) {

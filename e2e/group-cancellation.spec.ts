@@ -1,14 +1,22 @@
 import { expect, test } from "@playwright/test";
 
 import { insertContactWithGroups, resetDatabase } from "./database";
+import { fixtureEmail, signIn } from "./sign-in";
 
 const contactName = "Анна Смирнова";
 const assignedGroup = "Семья";
 const unassignedGroup = "Теннис";
 
-test.beforeEach(async () => {
+test.beforeEach(async ({ page }) => {
   await resetDatabase();
-  await insertContactWithGroups(contactName, assignedGroup, unassignedGroup);
+  const email = fixtureEmail();
+  await insertContactWithGroups(
+    email,
+    contactName,
+    assignedGroup,
+    unassignedGroup,
+  );
+  await signIn(page, email);
 });
 
 test("Без сохранения группы контакта не меняются", async ({ page }) => {

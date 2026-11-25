@@ -33,7 +33,15 @@ services:
   app:
     image: ghcr.io/111ani/personal-crm:${APP_TAG:?APP_TAG is not set}
     restart: unless-stopped
-    environment: *app-env
+    environment:
+      <<: *app-env
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     ports:
       # nginx proxies app.lena-14.ru here; not reachable from the network
       - "127.0.0.1:3000:3000"
@@ -58,7 +66,9 @@ services:
     image: ghcr.io/111ani/personal-crm:${APP_TAG:?APP_TAG is not set}
     profiles: [tools]
     command: ["node", "scripts/migrate.ts"]
-    environment: *app-env
+    environment:
+      <<: *app-env
+      CRM_OWNER_EMAIL: ${CRM_OWNER_EMAIL:-}
     depends_on:
       db:
         condition: service_healthy

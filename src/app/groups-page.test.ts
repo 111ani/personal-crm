@@ -11,10 +11,11 @@ import {
   insertGroup,
   insertGroupWithContacts,
 } from "../../test/factories";
+import { TEST_OWNER_ID } from "../../test/factories";
 
 // What a row of the "Группы" page says: "Теннис — 4 контакта"
 async function groupRows() {
-  const list = await listGroups();
+  const list = await listGroups(TEST_OWNER_ID);
   return list.map(
     (group) => `${group.name} — ${formatGroupSize(group.contactCount)}`,
   );
@@ -78,7 +79,7 @@ describe("Создать группу", () => {
         message: "Укажите название группы",
       });
     }
-    expect(await listGroups()).toHaveLength(0);
+    expect(await listGroups(TEST_OWNER_ID)).toHaveLength(0);
   });
 
   test("Слишком длинное название", async () => {
@@ -88,7 +89,7 @@ describe("Создать группу", () => {
       status: "error",
       message: "Название слишком длинное — до 50 символов",
     });
-    expect(await listGroups()).toHaveLength(0);
+    expect(await listGroups(TEST_OWNER_ID)).toHaveLength(0);
 
     // 50 is still fine
     expect((await createGroup("а".repeat(50))).status).toBe("created");
@@ -195,10 +196,13 @@ describe("Удалить группу", () => {
     expect(annaLinks).toEqual([{ groupId: friendsId }]);
   });
 
-  test("Удалить уже удалённую группу — не ошибка", async () => {
+  test("Deleting an already deleted group returns the missing group error", async () => {
     const groupId = await insertGroup("Теннис");
     await deleteGroup(groupId);
 
-    expect(await deleteGroup(groupId)).toEqual({ status: "success" });
+    expect(await deleteGroup(groupId)).toEqual({
+      status: "error",
+      message: "Группа не найдена",
+    });
   });
 });

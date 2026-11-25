@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { authEnvironment } from "./e2e/auth-environment";
 import { getE2eDatabaseUrl } from "./test/database-url";
 
 // Not 3000: an app started there by hand works with the main database
@@ -30,6 +31,6 @@ export default defineConfig({
     // A server already running there may be connected to the main database
     reuseExistingServer: false,
     timeout: 5 * 60_000,
-    env: { DATABASE_URL: getE2eDatabaseUrl() },
+    env: authEnvironment(baseURL, getE2eDatabaseUrl()),
   },
 });
