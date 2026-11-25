@@ -154,9 +154,7 @@ describe("Без общения срок считается с момента, �
       days: 3,
       setAt: ago("1 day"),
     });
-    expect((await openCard(contactId)).dueLine).toBe(
-      await dueLineIn("2 days"),
-    );
+    expect((await openCard(contactId)).dueLine).toBe(await dueLineIn("2 days"));
 
     await updateContact(
       contactId,
@@ -164,9 +162,7 @@ describe("Без общения срок считается с момента, �
       cardForm({ frequency: "days", days: "5" }),
     );
 
-    expect((await openCard(contactId)).dueLine).toBe(
-      await dueLineIn("5 days"),
-    );
+    expect((await openCard(contactId)).dueLine).toBe(await dueLineIn("5 days"));
   });
 
   test.each([

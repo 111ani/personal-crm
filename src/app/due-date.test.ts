@@ -83,9 +83,7 @@ describe("Срок наступает с начала дня", () => {
   test("Весь день срока — «срок сегодня»: накануне", async () => {
     const contactId = await contactWithNoteDaysAgo(6);
 
-    expect((await openCard(contactId)).dueLine).toBe(
-      await dueLineIn("1 day"),
-    );
+    expect((await openCard(contactId)).dueLine).toBe(await dueLineIn("1 day"));
     expect((await openDueBlock()).ids).not.toContain(contactId);
   });
 
@@ -146,9 +144,7 @@ describe("Срок в карточке контакта", () => {
     });
     await insertNote(contactId);
 
-    expect((await openCard(contactId)).dueLine).toBe(
-      await dueLineIn("7 days"),
-    );
+    expect((await openCard(contactId)).dueLine).toBe(await dueLineIn("7 days"));
   });
 
   test("Срок прошёл", async () => {

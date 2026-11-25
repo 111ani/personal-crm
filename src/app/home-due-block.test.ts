@@ -30,7 +30,11 @@ describe("Блок «Пора связаться» на главной", () => {
     ];
     for (const { name, lastNoteAgo } of people) {
       const contactId = await contactWithLastNote(name, lastNoteAgo);
-      await updateContact(contactId, idle, cardForm({ name, frequency: "week" }));
+      await updateContact(
+        contactId,
+        idle,
+        cardForm({ name, frequency: "week" }),
+      );
     }
     // An old note but no frequency: never in the block
     await contactWithLastNote("Глеб", "1 year");
