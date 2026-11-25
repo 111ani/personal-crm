@@ -41,7 +41,11 @@ export async function ContactList({
     if (group) {
       const empty = formatEmptyList({ query, groupName: group.name, total });
       return (
-        <EmptyState icon={<UsersIcon />} title={empty.title} text={empty.text} />
+        <EmptyState
+          icon={<UsersIcon />}
+          title={empty.title}
+          text={empty.text}
+        />
       );
     }
     return (
@@ -88,10 +92,7 @@ export async function ContactList({
             {items.map((contact) => {
               const isNew = contact.id === highlightId;
               return (
-                <li
-                  key={contact.id}
-                  className={cn(isNew && "bg-highlight")}
-                >
+                <li key={contact.id} className={cn(isNew && "bg-highlight")}>
                   {isNew && <ScrollIntoView />}
                   <Link
                     href={`/contacts/${contact.id}`}
@@ -165,12 +166,19 @@ function EmptyState({
 
 export function ContactListSkeleton() {
   return (
-    <div className="grid gap-4" aria-busy="true" aria-label="Загружаем контакты">
+    <div
+      className="grid gap-4"
+      aria-busy="true"
+      aria-label="Загружаем контакты"
+    >
       <Skeleton className="h-4 w-40" />
       <div className="overflow-hidden rounded-card bg-card ring-1 ring-border">
         <ul className="divide-y">
           {Array.from({ length: 8 }, (_, index) => (
-            <li key={index} className="flex items-center gap-4 px-4 py-3.5 md:px-6">
+            <li
+              key={index}
+              className="flex items-center gap-4 px-4 py-3.5 md:px-6"
+            >
               <Skeleton className="size-10 rounded-full" />
               <div className="grid flex-1 gap-1.5">
                 <Skeleton className="h-4 w-48" />

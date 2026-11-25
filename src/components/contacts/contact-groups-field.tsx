@@ -39,7 +39,9 @@ export function ContactGroupsField({
       all.push(group);
     }
   }
-  all.sort((a, b) => byName.compare(a.name, b.name) || a.id.localeCompare(b.id));
+  all.sort(
+    (a, b) => byName.compare(a.name, b.name) || a.id.localeCompare(b.id),
+  );
 
   function toggle(groupId: string) {
     setTicked((current) => {

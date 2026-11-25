@@ -23,10 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Note } from "@/db/schema";
-import {
-  getContactWithNotes,
-  type ContactDue,
-} from "@/lib/contacts/queries";
+import { getContactWithNotes, type ContactDue } from "@/lib/contacts/queries";
 import { contactIdSchema } from "@/lib/contacts/validation";
 import { listGroups } from "@/lib/groups/queries";
 import {

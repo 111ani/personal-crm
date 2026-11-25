@@ -44,8 +44,7 @@ export type CreateGroupResult =
   | { status: "error"; message: string };
 
 export type GroupResult =
-  | { status: "success" }
-  | { status: "error"; message: string };
+  { status: "success" } | { status: "error"; message: string };
 
 export type ContactFormState =
   | { status: "idle" }
@@ -69,16 +68,14 @@ export type NoteFormState =
   | { status: "success" };
 
 export type DeleteContactState =
-  | { status: "idle" }
-  | { status: "error"; message: string };
+  { status: "idle" } | { status: "error"; message: string };
 
 export type CheckInResult =
   | { status: "success"; checkInId: string }
   | { status: "error"; message: string };
 
 export type CheckInChangeResult =
-  | { status: "success" }
-  | { status: "error"; message: string };
+  { status: "success" } | { status: "error"; message: string };
 
 const SAVE_FAILED = "Не удалось сохранить. Попробуйте ещё раз";
 const CHECK_IN_FAILED = "Не удалось отметить. Попробуйте ещё раз";
@@ -112,15 +109,14 @@ async function replaceContactGroups(
   if (groupIds.length === 0) {
     return;
   }
-  await tx.insert(contactGroups).select(
-    (qb) =>
-      qb
-        .select({
-          contactId: sql<string>`${contactId}::uuid`.as("contact_id"),
-          groupId: groups.id,
-        })
-        .from(groups)
-        .where(inArray(groups.id, groupIds)),
+  await tx.insert(contactGroups).select((qb) =>
+    qb
+      .select({
+        contactId: sql<string>`${contactId}::uuid`.as("contact_id"),
+        groupId: groups.id,
+      })
+      .from(groups)
+      .where(inArray(groups.id, groupIds)),
   );
 }
 
@@ -136,7 +132,9 @@ export async function createContact(
     return {
       status: "error",
       message: "Проверьте поля формы",
-      fieldErrors: parsed.success ? {} : firstErrors<ContactField>(parsed.error),
+      fieldErrors: parsed.success
+        ? {}
+        : firstErrors<ContactField>(parsed.error),
       values,
       groupIds,
     };
@@ -269,7 +267,10 @@ export async function deleteContact(
     await getDb().delete(contacts).where(eq(contacts.id, id.data));
   } catch (error) {
     console.error("Failed to delete contact", error);
-    return { status: "error", message: "Не удалось удалить. Попробуйте ещё раз" };
+    return {
+      status: "error",
+      message: "Не удалось удалить. Попробуйте ещё раз",
+    };
   }
 
   refreshAllPages();

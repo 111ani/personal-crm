@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run --configLoader runner",
     "test:watch": "vitest --configLoader runner",
+    "test:e2e": "playwright test",
     "db:up": "docker compose up -d --wait",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -34,6 +37,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
@@ -42,6 +46,7 @@
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "prettier": "3.10.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",

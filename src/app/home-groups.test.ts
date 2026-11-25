@@ -34,7 +34,8 @@ async function openHome(params: Record<string, string>) {
   ]);
   return {
     // The row of buttons: "Все", then the groups; null while there are none
-    buttons: allGroups.length > 0 ? ["Все", ...allGroups.map((g) => g.name)] : null,
+    buttons:
+      allGroups.length > 0 ? ["Все", ...allGroups.map((g) => g.name)] : null,
     selected: group?.name ?? "Все",
     names: items.map((contact) => contact.name),
     counter: formatListCounter({

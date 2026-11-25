@@ -1,5 +1,5 @@
 # Production stack on the server, docker compose project "prod".
-# Run it through deploy/common.sh (deploy.sh, rollback.sh): it passes
+# Run it through the scripts in deploy/: they pass
 # /srv/personal-crm/.env (database settings) and release.env (image tags).
 
 x-logging: &logging
