@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Returns the previous app image. Only a person runs it, never the pipeline:
-#   sudo -u app-deploy bash /srv/personal-crm/deploy/rollback.sh
-# The previous image must support the current database schema.
+# Restores the previous local image when the operator selects rollback in
+# Deploy prod. The optional database restore is an interactive recovery path.
 set -euo pipefail
 
 BACKUP_FILE=
@@ -53,5 +52,6 @@ fi
 log "Roll back from $CURRENT to $PREVIOUS"
 write_release "$PREVIOUS" "$CURRENT"
 start_app "$PREVIOUS"
+prune_production_images "$PREVIOUS" "$CURRENT"
 
 log "Rolled back to $PREVIOUS. To return, run this script again"

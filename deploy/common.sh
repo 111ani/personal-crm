@@ -92,6 +92,32 @@ start_app() {
   smoke_app "$1"
 }
 
+# Staging holds a shared lock while it pulls and starts an image.
+prune_production_images() (
+  local current="$1" previous="$2" staging_tag staging_container running_staging_tag cutoff image created
+  exec 8>"$ROOT_DIR/image-cleanup.lock"
+  flock -x 8
+  log "Clean up old server images"
+  staging_tag=$(release_value APP_TAG "$ROOT_DIR/staging/release.env")
+  staging_container=$(docker ps -a -q --filter label=com.docker.compose.project=staging \
+    --filter label=com.docker.compose.service=app --filter label=com.docker.compose.oneoff=False)
+  running_staging_tag=
+  if [ -n "$staging_container" ]; then
+    running_staging_tag=$(container_app_tag "$staging_container")
+  fi
+  cutoff=$(date -u -d '14 days ago' +%s)
+  docker image ls --format '{{.Repository}}:{{.Tag}}' "$IMAGE" |
+    while IFS= read -r image; do
+      case "${image##*:}" in
+        "$current" | "$previous" | "$staging_tag" | "$running_staging_tag" | '<none>') continue ;;
+      esac
+      created=$(docker image inspect --format '{{.Created}}' "$image")
+      if [ "$(date -u -d "$created" +%s)" -lt "$cutoff" ]; then
+        docker image rm "$image" || echo "Could not remove $image, skipped"
+      fi
+    done
+)
+
 # Checks /health through nginx the same way a browser does.
 smoke_app() {
   log "Smoke: https://$APP_HOST/health"

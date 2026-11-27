@@ -1,0 +1,9 @@
+[Unit]
+Description=Run the production Personal CRM backup daily at 03:00 Moscow time
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Europe/Moscow
+Persistent=true
+
+[Install]
+WantedBy=timers.target

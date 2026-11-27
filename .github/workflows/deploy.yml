@@ -1,16 +1,10 @@
-# Build one image per SHA. Deploy it to both environments independently.
-name: Deploy
+# Build one image per SHA and deploy it to staging.
+name: Deploy staging
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      target:
-        description: Environment to deploy
-        type: choice
-        options: [prod, staging]
-        default: prod
 
 env:
   IMAGE: ghcr.io/111ani/personal-crm
@@ -18,6 +12,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    concurrency:
+      group: build-image-${{ github.sha }}
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -32,7 +29,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check whether the SHA is already published
+        id: image
+        run: |
+          reference="$IMAGE:$GITHUB_SHA"
+          if result=$(docker buildx imagetools inspect "$reference" 2>&1); then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          elif grep -Fq "$reference: not found" <<< "$result"; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            printf '%s\n' "$result" >&2
+            exit 1
+          fi
+
       - uses: docker/build-push-action@v7
+        if: steps.image.outputs.build == 'true'
         with:
           context: .
           push: true
@@ -43,21 +54,18 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target: ${{ github.event_name == 'push' && fromJSON('["prod","staging"]') || fromJSON(format('["{0}"]', inputs.target)) }}
-    environment: ${{ matrix.target }}
+    environment:
+      name: staging
+      url: https://test-app.lena-14.ru
     concurrency:
-      group: deploy-${{ matrix.target }}
+      group: deploy-staging
       cancel-in-progress: false
     permissions:
       contents: read
       packages: read
     env:
       TARGET: ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}
-      DEPLOY_DIR: ${{ matrix.target == 'staging' && '/srv/personal-crm/staging' || '/srv/personal-crm' }}
-      DEPLOY_ENV: ${{ matrix.target }}
+      DEPLOY_DIR: /srv/personal-crm/staging
     steps:
       - uses: actions/checkout@v7
 
@@ -79,4 +87,4 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           printf '%s' "$GHCR_TOKEN" |
-            ssh "$TARGET" bash "$DEPLOY_DIR/deploy/deploy.sh" "$DEPLOY_ENV" "$GITHUB_SHA" "$GITHUB_ACTOR"
+            ssh "$TARGET" bash "$DEPLOY_DIR/deploy/deploy.sh" staging "$GITHUB_SHA" "$GITHUB_ACTOR"

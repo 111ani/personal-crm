@@ -14,10 +14,16 @@ GHCR_USER="${3:-}"
 source "$(dirname "$0")/common.sh"
 # shellcheck source=database.sh
 source "$APP_DIR/deploy/database.sh"
+# shellcheck source=backup-retention.sh
+source "$APP_DIR/deploy/backup-retention.sh"
 
 [ "$CRM_ENVIRONMENT" = staging ] || [ -n "$GHCR_USER" ] || fail "$USAGE"
 
 lock_environment
+if [ "$CRM_ENVIRONMENT" = staging ]; then
+  exec 8>"$ROOT_DIR/image-cleanup.lock"
+  flock -s 8
+fi
 check_restore_complete
 check_env_file
 touch "$RELEASE_FILE"
@@ -86,6 +92,7 @@ if [ -n "$DB_CONTAINER" ]; then
       (umask 077; printf '%s\n%s\n' "$CURRENT" "$BACKUP" >"$AUTH_BASELINE_FILE.tmp")
       mv "$AUTH_BASELINE_FILE.tmp" "$AUTH_BASELINE_FILE"
     fi
+    prune_backups deploy
   fi
 else
   DB_VOLUME=$(docker volume ls -q --filter label=com.docker.compose.project=prod \
@@ -111,19 +118,7 @@ write_release "$TAG" "$PREVIOUS"
 start_app "$TAG"
 
 if [ "$CRM_ENVIRONMENT" = prod ]; then
-  log "Clean up old images"
-  STAGING_TAG=$(release_value APP_TAG "$ROOT_DIR/staging/release.env")
-  CUTOFF=$(date -u -d '14 days ago' +%s)
-  docker image ls --format '{{.Repository}}:{{.Tag}}' "$IMAGE" |
-    while read -r image; do
-      case "${image##*:}" in
-        "$TAG" | "$PREVIOUS" | "$STAGING_TAG" | '<none>') continue ;;
-      esac
-      CREATED=$(docker image inspect --format '{{.Created}}' "$image")
-      if [ "$(date -u -d "$CREATED" +%s)" -lt "$CUTOFF" ]; then
-        docker image rm "$image" || echo "Could not remove $image, skipped"
-      fi
-    done
+  prune_production_images "$TAG" "$PREVIOUS"
 fi
 
 log "Deployed $TAG to $CRM_ENVIRONMENT (previous: ${PREVIOUS:-none})"

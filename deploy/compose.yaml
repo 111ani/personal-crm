@@ -2,7 +2,10 @@
 # Run it through the scripts in deploy/ to load the selected environment.
 
 x-logging: &logging
-  driver: journald
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
 
 x-app-env: &app-env
   # Only letters and digits in the password: it goes into a URL as is

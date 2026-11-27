@@ -1,0 +1,91 @@
+name: Deploy prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full SHA from a successful staging deploy (blank uses the latest)
+        type: string
+        required: false
+      rollback:
+        description: Roll back to the previous production version
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+      url: https://app.lena-14.ru
+    permissions:
+      contents: read
+      deployments: read
+      packages: read
+    env:
+      TARGET: ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}
+      DEPLOY_DIR: /srv/personal-crm
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select a successful staging version
+        if: "!inputs.rollback"
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUESTED_SHA: ${{ inputs.sha }}
+        run: |
+          sha=$(bash deploy/select-staging-sha.sh "$REQUESTED_SHA")
+          printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
+          printf '### Selected staging SHA\n\n`%s`\n' "$sha" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Copy deploy scripts to the server
+        run: rsync -rltz --delete deploy/ "$TARGET:$DEPLOY_DIR/deploy/"
+
+      - name: Deploy
+        if: "!inputs.rollback"
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" |
+            ssh "$TARGET" bash "$DEPLOY_DIR/deploy/deploy.sh" prod "$RELEASE_SHA" "$GITHUB_ACTOR"
+
+      - name: Roll back
+        if: inputs.rollback
+        run: ssh "$TARGET" bash "$DEPLOY_DIR/deploy/rollback.sh"
+
+      - name: Record the running production SHA
+        run: |
+          sha=$(ssh "$TARGET" "sed -n 's/^APP_TAG=//p' '$DEPLOY_DIR/release.env'")
+          [[ "$sha" =~ ^[a-f0-9]{40}$ ]]
+          printf '### Production SHA\n\n`%s`\n' "$sha" >> "$GITHUB_STEP_SUMMARY"
+
+  cleanup-registry:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Remove old container image versions from GHCR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash deploy/cleanup-registry.sh
