@@ -1,12 +1,8 @@
-# Production stack on the server, docker compose project "prod".
-# Run it through the scripts in deploy/: they pass
-# /srv/personal-crm/.env (database settings) and release.env (image tags).
+# Server stack for Docker Compose projects "prod" and "staging".
+# Run it through the scripts in deploy/ to load the selected environment.
 
 x-logging: &logging
-  driver: json-file
-  options:
-    max-size: 10m
-    max-file: "3"
+  driver: journald
 
 x-app-env: &app-env
   # Only letters and digits in the password: it goes into a URL as is
@@ -16,6 +12,7 @@ services:
   db:
     image: postgres:18-alpine
     restart: unless-stopped
+    mem_limit: ${DB_MEMORY_LIMIT:-0}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is not set in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in .env}
@@ -33,6 +30,7 @@ services:
   app:
     image: ghcr.io/111ani/personal-crm:${APP_TAG:?APP_TAG is not set}
     restart: unless-stopped
+    mem_limit: ${APP_MEMORY_LIMIT:-0}
     environment:
       <<: *app-env
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-}
@@ -43,8 +41,8 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
     ports:
-      # nginx proxies app.lena-14.ru here; not reachable from the network
-      - "127.0.0.1:3000:3000"
+      # The corresponding nginx virtual host proxies to this local port.
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -65,6 +63,7 @@ services:
   migrate:
     image: ghcr.io/111ani/personal-crm:${APP_TAG:?APP_TAG is not set}
     profiles: [tools]
+    mem_limit: ${APP_MEMORY_LIMIT:-0}
     command: ["node", "scripts/migrate.ts"]
     environment:
       <<: *app-env
