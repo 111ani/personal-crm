@@ -7,12 +7,13 @@ set -euo pipefail
 # Resolve relative paths before common.sh changes the working directory.
 BACKUP_FILE=$(realpath -e -- "$1")
 
+CRM_ENVIRONMENT=prod
 # shellcheck source=common.sh
 source "$(dirname "$0")/common.sh"
 # shellcheck source=database.sh
 source "$APP_DIR/deploy/database.sh"
 
-lock_production
+lock_environment
 check_env_file
 
 # Compose needs an image tag to load the project even for read-only commands.

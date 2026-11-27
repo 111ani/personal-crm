@@ -1,16 +1,16 @@
-# Push to main -> image tagged with the commit SHA -> GHCR -> on the server:
-# backup -> migrations -> new image -> smoke /health. The steps live in deploy/.
+# Build one image per SHA. Deploy it to both environments independently.
 name: Deploy
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
-# One deploy at a time; a newer push waits for the running one
-concurrency:
-  group: deploy-prod
-  cancel-in-progress: false
+    inputs:
+      target:
+        description: Environment to deploy
+        type: choice
+        options: [prod, staging]
+        default: prod
 
 env:
   IMAGE: ghcr.io/111ani/personal-crm
@@ -43,11 +43,21 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ github.event_name == 'push' && fromJSON('["prod","staging"]') || fromJSON(format('["{0}"]', inputs.target)) }}
+    environment: ${{ matrix.target }}
+    concurrency:
+      group: deploy-${{ matrix.target }}
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: read
     env:
       TARGET: ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}
+      DEPLOY_DIR: ${{ matrix.target == 'staging' && '/srv/personal-crm/staging' || '/srv/personal-crm' }}
+      DEPLOY_ENV: ${{ matrix.target }}
     steps:
       - uses: actions/checkout@v7
 
@@ -62,11 +72,11 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
       - name: Copy deploy scripts to the server
-        run: rsync -rltz --delete deploy/ "$TARGET:/srv/personal-crm/deploy/"
+        run: rsync -rltz --delete deploy/ "$TARGET:$DEPLOY_DIR/deploy/"
 
       - name: Deploy
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           printf '%s' "$GHCR_TOKEN" |
-            ssh "$TARGET" bash /srv/personal-crm/deploy/deploy.sh "$GITHUB_SHA" "$GITHUB_ACTOR"
+            ssh "$TARGET" bash "$DEPLOY_DIR/deploy/deploy.sh" "$DEPLOY_ENV" "$GITHUB_SHA" "$GITHUB_ACTOR"

@@ -10,12 +10,13 @@ if [ "$#" -ne 0 ]; then
   BACKUP_FILE=$(realpath -e -- "$2")
 fi
 
+CRM_ENVIRONMENT=prod
 # shellcheck source=common.sh
 source "$(dirname "$0")/common.sh"
 # shellcheck source=database.sh
 source "$APP_DIR/deploy/database.sh"
 
-lock_production
+lock_environment
 if [ -z "$BACKUP_FILE" ]; then check_restore_complete; fi
 check_env_file
 CURRENT=$(release_value APP_TAG)
