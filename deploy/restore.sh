@@ -27,7 +27,7 @@ restore_database "$BACKUP_FILE" "$DATABASE" "$CURRENT"
 
 log "Start the existing production app ($CURRENT)"
 compose start --wait --wait-timeout 180 app ||
-  fail "the app did not become healthy after restore. Logs: docker logs prod-app-1"
+  fail "the app did not become healthy after restore. Logs: sudo journalctl CONTAINER_NAME=prod-app-1 -n 100 --no-pager"
 smoke_app "$CURRENT"
 rm -- "$RESTORE_PENDING"
 log "Restored $DATABASE from $BACKUP_FILE"

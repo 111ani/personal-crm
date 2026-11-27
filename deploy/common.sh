@@ -88,7 +88,7 @@ check_env_file() {
 
 start_app() {
   APP_TAG="$1" compose up -d --wait --wait-timeout 180 app ||
-    fail "the app container with image $1 did not become healthy. Logs: docker logs $CRM_ENVIRONMENT-app-1"
+    fail "the app container with image $1 did not become healthy. Logs: sudo journalctl CONTAINER_NAME=$CRM_ENVIRONMENT-app-1 -n 100 --no-pager"
   smoke_app "$1"
 }
 
