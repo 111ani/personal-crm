@@ -11,6 +11,7 @@ import {
   SearchInput,
   SearchInputFallback,
 } from "@/components/contacts/search-input";
+import { UpcomingBirthdays } from "@/components/contacts/upcoming-birthdays";
 import { GroupFilter } from "@/components/groups/group-filter";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
@@ -54,6 +55,10 @@ async function ContactsPageContent({
           Люди, которых вы знаете лично, и о чём вы с ними договорились.
         </p>
       </div>
+
+      <Suspense>
+        <UpcomingBirthdays ownerId={ownerId} searchParams={searchParams} />
+      </Suspense>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Suspense fallback={<SearchInputFallback />}>

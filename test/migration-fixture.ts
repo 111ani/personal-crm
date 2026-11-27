@@ -30,13 +30,20 @@ export async function withMigrationDatabase(
   }
 }
 
-export async function migrateBeforeAuth(pool: Pool) {
+export function migrateBeforeAuth(pool: Pool) {
+  return migrateThrough(pool, "0003_groups");
+}
+
+export async function migrateThrough(pool: Pool, tag: string) {
   const folder = await mkdtemp(join(tmpdir(), "crm-migrate-test-"));
   try {
     const journal = JSON.parse(
       await readFile("drizzle/meta/_journal.json", "utf8"),
     );
-    const entries = journal.entries.slice(0, 4) as Array<{ tag: string }>;
+    const allEntries = journal.entries as Array<{ tag: string }>;
+    const lastIndex = allEntries.findIndex((entry) => entry.tag === tag);
+    if (lastIndex === -1) throw new Error(`Migration not found: ${tag}`);
+    const entries = allEntries.slice(0, lastIndex + 1);
     await mkdir(join(folder, "meta"));
     await writeFile(
       join(folder, "meta", "_journal.json"),

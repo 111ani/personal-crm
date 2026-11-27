@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import { getTestDatabaseUrl } from "../test/database-url";
 import {
   migrateBeforeAuth,
+  migrateThrough,
   withMigrationDatabase,
 } from "../test/migration-fixture";
 import { migrateDatabase } from "./migrate-db";
@@ -66,7 +67,13 @@ test("The migration assigns legacy records to the owner and preserves their cont
     } = await pool.query("select id, email from auth_user");
     expect(owner.email).toBe("owner@example.com");
     expect((await pool.query("select * from contacts")).rows).toEqual([
-      { ...contact, owner_id: owner.id },
+      {
+        ...contact,
+        owner_id: owner.id,
+        birth_day: null,
+        birth_month: null,
+        birth_year: null,
+      },
     ]);
     expect((await pool.query("select * from groups")).rows).toEqual([
       { ...group, owner_id: owner.id },
@@ -77,5 +84,30 @@ test("The migration assigns legacy records to the owner and preserves their cont
       ),
     );
     expect(after).toEqual(before);
+  });
+});
+
+test("Adding birthdays keeps a contact created before the migration", async () => {
+  await withMigrationDatabase(getTestDatabaseUrl(), async (pool) => {
+    await migrateThrough(pool, "0004_user_auth");
+    await pool.query(
+      "insert into auth_user (id, name, email) values ('owner', 'Owner', 'owner@example.test')",
+    );
+    const {
+      rows: [contact],
+    } = await pool.query(
+      "insert into contacts (owner_id, name, about) values ('owner', 'Anna', 'Known for years') returning *",
+    );
+
+    await migrateDatabase(pool, undefined);
+
+    expect((await pool.query("select * from contacts")).rows).toEqual([
+      {
+        ...contact,
+        birth_day: null,
+        birth_month: null,
+        birth_year: null,
+      },
+    ]);
   });
 });

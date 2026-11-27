@@ -17,14 +17,17 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { startOfToday } from "@/lib/contacts/queries";
 import {
   checkInIdSchema,
+  contactBirthDateSchema,
   contactFrequencySchema,
   contactIdSchema,
   contactSchema,
   groupIdsSchema,
   noteSchema,
+  readContactBirthDate,
   readContactForm,
   readContactFrequency,
   readGroupIds,
+  type ContactBirthDateValues,
   type ContactField,
   type ContactFormValues,
   type ContactFrequencyValues,
@@ -60,6 +63,8 @@ export type ContactFormState =
       frequency?: ContactFrequencyValues;
       // For the number of days under it
       frequencyError?: string;
+      birthDate?: ContactBirthDateValues;
+      birthDateError?: string;
     }
   | { status: "success"; contactId: string; name: string };
 
@@ -196,12 +201,14 @@ export async function updateContact(
 ): Promise<ContactFormState> {
   const values = readContactForm(formData);
   const frequencyValues = readContactFrequency(formData);
+  const birthDateValues = readContactBirthDate(formData);
   const groupIds = readGroupIds(formData);
   // Keep what the user typed and chose, so a failed save loses nothing
   const failure = (
     message: string,
     fieldErrors: Partial<Record<ContactField, string>> = {},
     frequencyError?: string,
+    birthDateError?: string,
   ): ContactFormState => ({
     status: "error",
     message,
@@ -210,6 +217,7 @@ export async function updateContact(
     groupIds,
     frequency: frequencyValues,
     frequencyError,
+    ...(birthDateValues && { birthDate: birthDateValues, birthDateError }),
   });
 
   const user = await getCurrentUser();
@@ -222,6 +230,7 @@ export async function updateContact(
 
   const parsed = contactSchema.safeParse(values);
   const frequency = contactFrequencySchema.safeParse(frequencyValues);
+  const birthDate = contactBirthDateSchema.safeParse(birthDateValues);
   const parsedGroupIds = groupIdsSchema.safeParse(groupIds);
   const frequencyIssue = frequency.error?.issues[0];
   if (frequencyIssue && frequencyIssue.path[0] !== "days") {
@@ -232,11 +241,12 @@ export async function updateContact(
     // Also only a tampered form: the field sends ids of existing groups
     return failure("Проверьте поля формы");
   }
-  if (!parsed.success || !frequency.success) {
+  if (!parsed.success || !frequency.success || !birthDate.success) {
     return failure(
       "Проверьте поля формы",
       parsed.success ? {} : firstErrors<ContactField>(parsed.error),
       frequencyIssue?.message,
+      birthDate.error?.issues[0]?.message,
     );
   }
   const { frequency: contactFrequency, days: contactFrequencyDays } =
@@ -249,6 +259,7 @@ export async function updateContact(
         .update(contacts)
         .set({
           ...parsed.data,
+          ...birthDate.data,
           contactFrequency,
           contactFrequencyDays,
           // A new frequency (or a new number of days) starts counting now; the

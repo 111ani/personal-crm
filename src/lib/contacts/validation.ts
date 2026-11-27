@@ -32,6 +32,56 @@ export const contactSchema = z.object({
   ),
 });
 
+const datePart = z.string().trim();
+const calendarDate = z.iso.date();
+
+export const contactBirthDateSchema = z
+  .object({ birthDay: datePart, birthMonth: datePart, birthYear: datePart })
+  .transform(({ birthDay, birthMonth, birthYear }, ctx) => {
+    if (!birthDay && !birthMonth && !birthYear) {
+      return { birthDay: null, birthMonth: null, birthYear: null };
+    }
+
+    // Use a leap year for validation when the birth year is unknown.
+    const year = birthYear || "2000";
+    const date = `${year}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`;
+    if (year === "0000" || !calendarDate.safeParse(date).success) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Укажите правильный день и месяц рождения. Год можно не указывать",
+      });
+      return z.NEVER;
+    }
+
+    return {
+      birthDay: Number(birthDay),
+      birthMonth: Number(birthMonth),
+      birthYear: birthYear ? Number(birthYear) : null,
+    };
+  })
+  .optional();
+
+export type ContactBirthDateValues = NonNullable<
+  z.input<typeof contactBirthDateSchema>
+>;
+
+export function readContactBirthDate(
+  formData: FormData,
+): ContactBirthDateValues | undefined {
+  const birthDay = formData.get("birthDay");
+  const birthMonth = formData.get("birthMonth");
+  const birthYear = formData.get("birthYear");
+  if (birthDay === null && birthMonth === null && birthYear === null) {
+    return undefined;
+  }
+  return {
+    birthDay: typeof birthDay === "string" ? birthDay : "",
+    birthMonth: typeof birthMonth === "string" ? birthMonth : "",
+    birthYear: typeof birthYear === "string" ? birthYear : "",
+  };
+}
+
 export const noteSchema = z.object({
   body: z
     .string()

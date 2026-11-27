@@ -155,6 +155,11 @@ async function ContactDetails({
                 phone: contact.phone ?? "",
                 email: contact.email ?? "",
               }}
+              initialBirthDate={{
+                birthDay: contact.birthDay?.toString() ?? "",
+                birthMonth: contact.birthMonth?.toString() ?? "",
+                birthYear: contact.birthYear?.toString() ?? "",
+              }}
               initialFrequency={{
                 frequency: contact.contactFrequency ?? "",
                 days: contact.contactFrequencyDays?.toString() ?? "",
