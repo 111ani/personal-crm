@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 # Deploys an app image on the server. GitHub Actions runs it after pushing
 # the image to GHCR:
-#   deploy.sh <image tag> <ghcr user>    (GHCR token on stdin)
-# Steps: pull the image -> back up the database -> migrations in a one-off
-# container -> start the new image -> smoke /health -> clean up old images.
-# No automatic rollback: on any error the script stops; a person decides
-# whether to run rollback.sh.
+#   deploy.sh <prod|staging> <image tag> <ghcr user>    (GHCR token on stdin)
+# For a manual staging deploy, omit the GHCR user to use a local image.
 set -euo pipefail
+
+USAGE='usage: deploy.sh <prod|staging> <image tag> <ghcr user>'
+CRM_ENVIRONMENT="${1:?$USAGE}"
+TAG="${2:?$USAGE}"
+GHCR_USER="${3:-}"
 
 # shellcheck source=common.sh
 source "$(dirname "$0")/common.sh"
 # shellcheck source=database.sh
 source "$APP_DIR/deploy/database.sh"
+# shellcheck source=backup-retention.sh
+source "$APP_DIR/deploy/backup-retention.sh"
 
-TAG="${1:?usage: deploy.sh <image tag> <ghcr user>}"
-GHCR_USER="${2:?usage: deploy.sh <image tag> <ghcr user>}"
+[ "$CRM_ENVIRONMENT" = staging ] || [ -n "$GHCR_USER" ] || fail "$USAGE"
 
-lock_production
+lock_environment
+if [ "$CRM_ENVIRONMENT" = staging ]; then
+  exec 8>"$ROOT_DIR/image-cleanup.lock"
+  flock -s 8
+fi
 check_restore_complete
 check_env_file
 touch "$RELEASE_FILE"
@@ -29,11 +36,17 @@ if [ -n "$APP_CONTAINER" ]; then
   CURRENT=$(container_app_tag "$APP_CONTAINER")
 fi
 
-log "Pull $IMAGE:$TAG"
-# The token from GitHub Actions is valid only while the job runs
-docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
-trap 'docker logout ghcr.io >/dev/null' EXIT
-docker pull "$IMAGE:$TAG"
+if [ -n "$GHCR_USER" ]; then
+  log "Pull $IMAGE:$TAG"
+  # Each deploy gets its own credentials because prod and staging can overlap.
+  registry_config=$(mktemp -d)
+  trap 'rm -f -- "$registry_config/config.json"; rmdir -- "$registry_config"' EXIT
+  docker --config "$registry_config" login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
+  docker --config "$registry_config" pull "$IMAGE:$TAG"
+else
+  docker image inspect "$IMAGE:$TAG" >/dev/null ||
+    fail "image $IMAGE:$TAG is not on the server"
+fi
 TARGET_SCHEMA=$(image_database_schema "$TAG")
 CURRENT_SCHEMA=legacy
 if [ -n "$CURRENT" ]; then
@@ -46,17 +59,23 @@ if [ "$TARGET_SCHEMA" = owner-v1 ]; then
     for (const name of ["BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM"]) {
       if (!process.env[name]?.trim()) throw new Error(`${name} is required to deploy sign-in`);
     }
-    if (new URL(process.env.BETTER_AUTH_URL).protocol !== "https:") {
-      throw new Error("BETTER_AUTH_URL must use HTTPS");
+    if (new URL(process.env.BETTER_AUTH_URL).origin !== `https://${process.argv[1]}`) {
+      throw new Error(`BETTER_AUTH_URL must use https://${process.argv[1]}`);
     }
-  '
+  ' "$APP_HOST"
 fi
 
 DB_CONTAINER=$(compose ps --all --quiet db)
+if [ "$CRM_ENVIRONMENT" = staging ]; then
+  [ -n "$DB_CONTAINER" ] || fail "initialize the staging database from a production backup first"
+fi
 if [ -n "$DB_CONTAINER" ]; then
   # Start the existing database if needed without applying new configuration.
   compose start --wait --wait-timeout 90 db
   DATABASE=$(database_name)
+  if [ "$CRM_ENVIRONMENT" = staging ] && [ "$(database_has_contacts "$DATABASE")" != t ]; then
+    fail "initialize the staging database from a production backup first"
+  fi
   DB_SCHEMA=$(database_schema "$DATABASE")
   if [ "$DB_SCHEMA" = owner-v1 ] && [ "$TARGET_SCHEMA" = legacy ]; then
     fail "a legacy image cannot run against an owner-scoped database; use the manual restore procedure"
@@ -65,12 +84,15 @@ if [ -n "$DB_CONTAINER" ]; then
     log "Stop the app before the first sign-in migration"
     compose stop app
   fi
-  log "Back up production database"
-  BACKUP=$(backup_database deploy "${CURRENT:-unreleased}" "$DATABASE")
-  if [ "$DB_SCHEMA" = legacy ] && [ "$TARGET_SCHEMA" = owner-v1 ] && [ -n "$CURRENT" ]; then
-    # Keep the archive paired with the image that last wrote the legacy schema.
-    (umask 077; printf '%s\n%s\n' "$CURRENT" "$BACKUP" >"$AUTH_BASELINE_FILE.tmp")
-    mv "$AUTH_BASELINE_FILE.tmp" "$AUTH_BASELINE_FILE"
+  if [ "$CRM_ENVIRONMENT" = prod ]; then
+    log "Back up production database"
+    BACKUP=$(backup_database deploy "${CURRENT:-unreleased}" "$DATABASE")
+    if [ "$DB_SCHEMA" = legacy ] && [ "$TARGET_SCHEMA" = owner-v1 ] && [ -n "$CURRENT" ]; then
+      # Keep the archive paired with the image that last wrote the legacy schema.
+      (umask 077; printf '%s\n%s\n' "$CURRENT" "$BACKUP" >"$AUTH_BASELINE_FILE.tmp")
+      mv "$AUTH_BASELINE_FILE.tmp" "$AUTH_BASELINE_FILE"
+    fi
+    prune_backups deploy
   fi
 else
   DB_VOLUME=$(docker volume ls -q --filter label=com.docker.compose.project=prod \
@@ -95,13 +117,8 @@ fi
 write_release "$TAG" "$PREVIOUS"
 start_app "$TAG"
 
-log "Clean up old images"
-docker image ls --format '{{.Repository}}:{{.Tag}}' "$IMAGE" |
-  while read -r image; do
-    case "${image##*:}" in
-      "$TAG" | "$PREVIOUS") ;;
-      *) docker image rm "$image" || echo "Could not remove $image, skipped" ;;
-    esac
-  done
+if [ "$CRM_ENVIRONMENT" = prod ]; then
+  prune_production_images "$TAG" "$PREVIOUS"
+fi
 
-log "Deployed $TAG (previous: ${PREVIOUS:-none})"
+log "Deployed $TAG to $CRM_ENVIRONMENT (previous: ${PREVIOUS:-none})"

@@ -13,6 +13,11 @@ database_name() {
   db_exec printenv POSTGRES_DB </dev/null
 }
 
+database_has_contacts() {
+  db_exec psql -X --no-password --dbname="$1" --no-align --tuples-only --set=ON_ERROR_STOP=1 \
+    --command="SELECT to_regclass('public.contacts') IS NOT NULL" </dev/null
+}
+
 database_schema() {
   db_exec psql -X --no-password --dbname="$1" --no-align --tuples-only --set=ON_ERROR_STOP=1 \
     --command="SELECT CASE WHEN to_regclass('public.auth_user') IS NULL THEN 'legacy' ELSE 'owner-v1' END" </dev/null

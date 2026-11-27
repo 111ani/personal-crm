@@ -1,0 +1,12 @@
+[Unit]
+Description=Back up the production Personal CRM database
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=app-deploy
+Group=app-deploy
+WorkingDirectory=/srv/personal-crm
+UMask=0077
+ExecStart=/usr/bin/bash /srv/personal-crm/deploy/backup.sh
