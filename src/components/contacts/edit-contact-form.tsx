@@ -9,6 +9,7 @@ import {
   type GroupSummary,
 } from "@/app/actions";
 import { CheckInToggle } from "@/components/contacts/check-in-toggle";
+import { ContactBirthDateField } from "@/components/contacts/contact-birth-date-field";
 import { ContactFields } from "@/components/contacts/contact-fields";
 import { ContactGroupsField } from "@/components/contacts/contact-groups-field";
 import {
@@ -17,6 +18,7 @@ import {
 } from "@/components/contacts/contact-frequency-field";
 import { Button } from "@/components/ui/button";
 import type {
+  ContactBirthDateValues,
   ContactFormValues,
   ContactFrequencyValues,
 } from "@/lib/contacts/validation";
@@ -24,6 +26,7 @@ import type {
 export function EditContactForm({
   contactId,
   initialValues,
+  initialBirthDate,
   initialFrequency,
   groups,
   initialGroupIds,
@@ -32,6 +35,7 @@ export function EditContactForm({
 }: {
   contactId: string;
   initialValues: ContactFormValues;
+  initialBirthDate: ContactBirthDateValues;
   initialFrequency: ContactFrequencyValues;
   groups: GroupSummary[];
   initialGroupIds: string[];
@@ -59,6 +63,10 @@ export function EditContactForm({
       ? state.frequency
       : initialFrequency;
   const errors = state.status === "error" ? state.fieldErrors : {};
+  const birthDate =
+    state.status === "error"
+      ? (state.birthDate ?? initialBirthDate)
+      : initialBirthDate;
   const frequencyError =
     state.status === "error" ? state.frequencyError : undefined;
   const formId = `contact-${contactId}`;
@@ -70,6 +78,12 @@ export function EditContactForm({
           idPrefix={formId}
           values={values}
           errors={errors}
+          disabled={isPending}
+        />
+        <ContactBirthDateField
+          idPrefix={`${formId}-birthDate`}
+          values={birthDate}
+          error={state.status === "error" ? state.birthDateError : undefined}
           disabled={isPending}
         />
         <ContactGroupsField

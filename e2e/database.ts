@@ -104,6 +104,19 @@ export async function insertContacts(email: string, names: string[]) {
   });
 }
 
+export function setBirthdayRelativeToToday(contactId: string, days: number) {
+  const date = sql`(current_date + ${days}::integer)`;
+  return withPool(async (pool) => {
+    await drizzle(pool)
+      .update(contacts)
+      .set({
+        birthDay: sql`extract(day from ${date})`,
+        birthMonth: sql`extract(month from ${date})`,
+      })
+      .where(eq(contacts.id, contactId));
+  });
+}
+
 export function insertContactWithGroups(
   email: string,
   contactName: string,

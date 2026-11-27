@@ -132,6 +132,9 @@ export const contacts = pgTable(
     howWeMet: text("how_we_met"),
     phone: text("phone"),
     email: text("email"),
+    birthDay: integer("birth_day"),
+    birthMonth: integer("birth_month"),
+    birthYear: integer("birth_year"),
     // How often to keep in touch; NULL - not set
     contactFrequency: text("contact_frequency", { enum: contactFrequencies }),
     // N for the "days" frequency; NULL for the others
@@ -150,6 +153,10 @@ export const contacts = pgTable(
   },
   (table) => [
     index("contacts_owner_name_idx").on(table.ownerId, table.name),
+    check(
+      "contacts_birth_date_parts_check",
+      sql`(${table.birthDay} is null) = (${table.birthMonth} is null) and (${table.birthYear} is null or ${table.birthDay} is not null)`,
+    ),
     check(
       "contacts_contact_frequency_check",
       sql`${table.contactFrequency} in (${sql.raw(

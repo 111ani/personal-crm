@@ -205,6 +205,29 @@ export async function listDueContacts(ownerId: string): Promise<DueContact[]> {
     );
 }
 
+export async function listUpcomingBirthdays(ownerId: string, today?: string) {
+  const firstDay =
+    today === undefined ? sql`${startOfToday}::date` : sql`${today}::date`;
+  const celebration = sql`(${firstDay} + birthday_window.day_number)`;
+
+  return getDb()
+    .select({
+      id: contacts.id,
+      name: contacts.name,
+      celebrationDate: sql<string>`to_char(${celebration}, 'YYYY-MM-DD')`,
+    })
+    .from(contacts)
+    .innerJoin(
+      sql`generate_series(0, 6) as birthday_window(day_number)`,
+      and(
+        eq(contacts.birthDay, sql`extract(day from ${celebration})`),
+        eq(contacts.birthMonth, sql`extract(month from ${celebration})`),
+      ),
+    )
+    .where(eq(contacts.ownerId, ownerId))
+    .orderBy(asc(celebration), asc(contacts.name), asc(contacts.id));
+}
+
 export async function getContactWithNotes(ownerId: string, id: string) {
   const ownedContact = and(eq(contacts.id, id), eq(contacts.ownerId, ownerId));
   const [contact] = await getDb()
